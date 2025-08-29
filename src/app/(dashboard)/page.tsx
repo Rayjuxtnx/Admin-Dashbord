@@ -2,11 +2,12 @@
 
 import { BookCopy, UtensilsCrossed } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { OverviewChart } from "@/components/dashboard/overview-chart";
 import { RecentPayments } from "@/components/dashboard/recent-payments";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { Landmark } from "lucide-react";
+import AdminChart from "@/components/dashboard/admin-chart";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 export default function OverviewPage() {
   const [menuItemsCount, setMenuItemsCount] = useState<number | string>("...");
@@ -106,7 +107,15 @@ export default function OverviewPage() {
       </div>
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
-            <OverviewChart />
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Sales Overview</CardTitle>
+                    <CardDescription>Online vs. Manual Payments</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AdminChart />
+                </CardContent>
+            </Card>
         </div>
         <div>
             <RecentPayments />
