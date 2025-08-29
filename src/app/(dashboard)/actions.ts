@@ -65,3 +65,19 @@ export async function getDashboardCounts() {
         totalPayments,
     };
 }
+
+export async function getRecentPayments() {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('amount, created_at, customer_phone')
+      .eq('status', 'Verified')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.error("Error fetching recent payments:", error);
+      return [];
+    }
+
+    return data.map(p => ({ ...p, amount: parseAmount(p.amount), phone_number: p.customer_phone }));
+}

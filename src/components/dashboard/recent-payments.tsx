@@ -1,73 +1,53 @@
-'use client';
+"use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getRecentPayments } from "@/app/(dashboard)/actions";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 
 type Payment = {
-  id: string;
-  customer: string;
-  amount: string;
-  date: string;
-  status: 'Verified' | 'Pending' | 'Invalid';
+  phone_number: string | null;
+  amount: number | null;
+  created_at: string;
 };
+
+// Helper to format phone number
+const formatPhoneNumber = (phone: string | null) => {
+  if (!phone) return "N/A";
+  // Basic formatting for Kenyan numbers
+  if (phone.startsWith("254")) {
+    return `+${phone.slice(0, 3)}...${phone.slice(-4)}`;
+  }
+  return phone;
+};
+
+// Helper to format date
+const formatDate = (dateString: string) => {
+    try {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+        });
+    } catch (e) {
+        return "Invalid Date";
+    }
+}
 
 export function RecentPayments() {
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPayments = async () => {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('status', 'Verified')
-        .order('date', { ascending: false })
-        .limit(5);
-
-      if (error) {
-        console.error("Error fetching recent payments:", error.message);
-        setError("Could not fetch recent payments. Please check your database permissions.");
-        setPayments([]);
-      } else {
-        setPayments(data || []);
-        setError(null);
-      }
+      setIsLoading(true);
+      const data = await getRecentPayments();
+      setPayments(data);
+      setIsLoading(false);
     };
 
     fetchPayments();
-
-    const channel = supabase
-      .channel('realtime recent-payments')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'payments' },
-        (payload) => {
-          fetchPayments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
-
-  const getInitials = (name: string) => {
-    if (!name) return "";
-    const names = name.split(' ');
-    if (names.length > 1) {
-      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
 
 
   return (
@@ -77,25 +57,46 @@ export function RecentPayments() {
         <CardDescription>Most recent successful payments.</CardDescription>
       </CardHeader>
       <CardContent>
-        {error ? (
-           <p className="text-sm text-destructive text-center py-8">{error}</p>
-        ) : payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No recent verified payments found.</p>
-        ) : (
-          <div className="space-y-6">
-            {payments.map((payment) => (
-              <div key={payment.id} className="flex items-center">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback>{getInitials(payment.customer)}</AvatarFallback>
+         {isLoading ? (
+            <div className="space-y-8">
+                {[...Array(5)].map((_, i) => (
+                   <div key={i} className="flex items-center">
+                     <Skeleton className="h-9 w-9 rounded-full" />
+                     <div className="ml-4 space-y-2">
+                       <Skeleton className="h-4 w-[100px]" />
+                       <Skeleton className="h-4 w-[150px]" />
+                     </div>
+                     <Skeleton className="ml-auto h-4 w-[50px]" />
+                   </div>
+                ))}
+            </div>
+         ) : payments.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+                No recent payments to display.
+            </p>
+         ) : (
+            <div className="space-y-8">
+            {payments.map((payment, index) => (
+                <div key={index} className="flex items-center">
+                <Avatar className="h-9 w-9">
+                    <AvatarFallback>
+                        {formatPhoneNumber(payment.phone_number)?.substring(1,3) || '??'}
+                    </AvatarFallback>
                 </Avatar>
-                <div className="ml-4 flex-1 space-y-1">
-                  <p className="text-sm font-medium leading-none">{payment.customer}</p>
-                  <p className="text-sm text-muted-foreground">Verified on {new Date(payment.date).toLocaleDateString()}</p>
+                <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                    {formatPhoneNumber(payment.phone_number)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                    Paid on {formatDate(payment.created_at)}
+                    </p>
                 </div>
-                <div className="ml-auto font-medium">{payment.amount}</div>
-              </div>
+                <div className="ml-auto font-medium">
+                    +Ksh {payment.amount?.toLocaleString() || 0}
+                </div>
+                </div>
             ))}
-          </div>
+            </div>
         )}
       </CardContent>
     </Card>
