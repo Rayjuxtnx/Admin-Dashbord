@@ -1,12 +1,5 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+'use client';
+
 import {
   Card,
   CardContent,
@@ -14,40 +7,96 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Image from "next/image";
+import { supabase } from "@/lib/supabase";
+import { useEffect, useState } from "react";
 
-const payments = [
-  { name: "Liam Johnson", email: "liam@example.com", amount: "KES 2,500.00", avatar: "https://picsum.photos/40/40?random=1", dataAiHint: "person portrait" },
-  { name: "Olivia Smith", email: "olivia@example.com", amount: "KES 1,250.00", avatar: "https://picsum.photos/40/40?random=2", dataAiHint: "person portrait" },
-  { name: "Noah Williams", email: "noah@example.com", amount: "KES 800.00", avatar: "https://picsum.photos/40/40?random=3", dataAiHint: "person portrait" },
-  { name: "Emma Brown", email: "emma@example.com", amount: "KES 3,500.00", avatar: "https://picsum.photos/40/40?random=4", dataAiHint: "person portrait" },
-  { name: "James Jones", email: "james@example.com", amount: "KES 450.00", avatar: "https://picsum.photos/40/40?random=5", dataAiHint: "person portrait" },
-];
+type Payment = {
+  id: string;
+  customer: string;
+  amount: string;
+};
 
 export function RecentPayments() {
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('id, customer, amount')
+        .eq('status', 'Verified')
+        .order('date', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error("Error fetching recent payments:", error);
+      } else {
+        setPayments(data as Payment[]);
+      }
+    };
+
+    fetchPayments();
+
+    const channel = supabase
+      .channel('realtime recent-payments')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payments' },
+        (payload) => {
+          fetchPayments(); // Refetch on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const getInitials = (name: string) => {
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle className="font-headline">Recent M-Pesa Payments</CardTitle>
-        <CardDescription>Most recent successful STK push payments.</CardDescription>
+        <CardTitle className="font-headline">Recent Verified Payments</CardTitle>
+        <CardDescription>Most recent successful payments.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {payments.map((payment, index) => (
-            <div key={index} className="flex items-center">
-              <Avatar className="h-10 w-10">
-                <Image src={payment.avatar} alt={payment.name} width={40} height={40} className="rounded-full" data-ai-hint={payment.dataAiHint}/>
-                <AvatarFallback>{payment.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="ml-4 flex-1 space-y-1">
-                <p className="text-sm font-medium leading-none">{payment.name}</p>
-                <p className="text-sm text-muted-foreground">{payment.email}</p>
+        {payments.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No recent verified payments.</p>
+        ) : (
+          <div className="space-y-6">
+            {payments.map((payment, index) => (
+              <div key={payment.id} className="flex items-center">
+                <Avatar className="h-10 w-10">
+                  <Image 
+                    src={`https://i.pravatar.cc/40?u=${payment.customer}`}
+                    alt={payment.customer} 
+                    width={40} 
+                    height={40} 
+                    className="rounded-full" 
+                    data-ai-hint="person portrait"
+                  />
+                  <AvatarFallback>{getInitials(payment.customer)}</AvatarFallback>
+                </Avatar>
+                <div className="ml-4 flex-1 space-y-1">
+                  <p className="text-sm font-medium leading-none">{payment.customer}</p>
+                  <p className="text-sm text-muted-foreground">Verified Payment</p>
+                </div>
+                <div className="ml-auto font-medium">{payment.amount}</div>
               </div>
-              <div className="ml-auto font-medium">{payment.amount}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
