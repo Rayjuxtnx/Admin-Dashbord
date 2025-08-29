@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { Landmark } from "lucide-react";
 import AdminChart from "@/components/dashboard/admin-chart";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { getDashboardCounts } from "./actions";
 
 export default function OverviewPage() {
   const [menuItemsCount, setMenuItemsCount] = useState<number | string>("...");
@@ -16,58 +17,19 @@ export default function OverviewPage() {
 
   useEffect(() => {
     const fetchCounts = async () => {
-      // Fetch menu items count
-      // const { count: menuCount, error: menuError } = await supabase
-      //   .from('menu_items')
-      //   .select('*', { count: 'exact', head: true });
+      setMenuItemsCount("...");
+      setReservationsCount("...");
+      setTotalPayments("...");
 
-      // if (!menuError) {
-      //   setMenuItemsCount(menuCount ?? 0);
-      // } else {
-      //   console.error("Error fetching menu items count:", menuError);
-      //   setMenuItemsCount("N/A");
-      // }
-      setMenuItemsCount(0); // Temporarily set to 0
+      // The menu count is temporarily disabled until the menu table is created.
+      setMenuItemsCount(0); 
 
-      // Fetch active reservations count
-      const { count: reservationsCount, error: reservationsError } = await supabase
-        .from('reservations')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['Paid', 'Pending']);
-        
-      if (!reservationsError) {
-        setReservationsCount(reservationsCount ?? 0);
-      } else {
-        console.error("Error fetching reservations count:", reservationsError);
-        setReservationsCount("N/A");
-      }
-      
-      // Fetch total payments
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('status', 'Verified');
-
-      if (!paymentsError) {
-        const total = paymentsData.reduce((acc, payment) => {
-            const amount = parseFloat(payment.amount.replace(/[^0-9.-]+/g,""));
-            return acc + (isNaN(amount) ? 0 : amount);
-        }, 0);
-        setTotalPayments(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KES' }).format(total));
-      } else {
-        console.error("Error fetching payments:", paymentsError);
-        setTotalPayments("N/A");
-      }
+      const { reservationsCount: resCount, totalPayments: totalRev } = await getDashboardCounts();
+      setReservationsCount(resCount);
+      setTotalPayments(totalRev);
     };
 
     fetchCounts();
-
-    // const menuChanges = supabase
-    //   .channel('table-db-changes-menu_items')
-    //   .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, 
-    //     (payload) => fetchCounts()
-    //   )
-    //   .subscribe();
 
     const reservationChanges = supabase
       .channel('table-db-changes-reservations')
@@ -84,7 +46,6 @@ export default function OverviewPage() {
       .subscribe();
 
     return () => {
-        // supabase.removeChannel(menuChanges);
         supabase.removeChannel(reservationChanges);
         supabase.removeChannel(paymentChanges);
     };

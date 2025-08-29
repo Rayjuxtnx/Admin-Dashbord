@@ -33,3 +33,35 @@ export async function getSalesDataForChart() {
     
     return { onlineSales, manualSales };
 }
+
+export async function getDashboardCounts() {
+    const { count: reservationsCount, error: reservationsError } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['Paid', 'Pending']);
+    
+    if (reservationsError) {
+        console.error('Error fetching reservations count:', reservationsError);
+    }
+    
+    const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('amount')
+        .eq('status', 'Verified');
+
+    let totalPayments = "N/A";
+    if (!paymentsError) {
+        const total = paymentsData.reduce((acc, payment) => {
+            const amount = parseFloat(payment.amount.replace(/[^0-9.-]+/g,""));
+            return acc + (isNaN(amount) ? 0 : amount);
+        }, 0);
+        totalPayments = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KES' }).format(total);
+    } else {
+        console.error("Error fetching payments:", paymentsError);
+    }
+
+    return {
+        reservationsCount: reservationsCount ?? 0,
+        totalPayments,
+    };
+}
