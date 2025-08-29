@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,30 +27,8 @@ const blogPosts = [
   }
 ];
 
-const signatureDishes = [
-  {
-    name: "Pilau Wednesday Special",
-    description: "Aromatic spiced rice with tender beef, a true taste of the coast.",
-    image: "https://images.unsplash.com/photo-1647998270792-69ac80570183?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8a2VueWFuJTIwZm9vZCUyMHBpbGF1fGVufDB8fHx8MTc1NTc4NDI3Mnww&ixlib=rb-4.1.0&q=80&w=1080",
-    aiHint: "kenyan food pilau"
-  },
-  {
-    name: "Chef's Grilled Tilapia",
-    description: "Fresh tilapia marinated and grilled to perfection, served with ugali.",
-    image: "https://images.unsplash.com/photo-1656945764473-6157c129817e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxncmlsbGVkJTIwZmlzaHxlbnwwfHx8fDE3NTU3ODQyNzF8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    aiHint: "grilled fish"
-  },
-  {
-    name: "Family Feast Platter",
-    description: "A generous platter of nyama choma, sausages, and sides for the whole family.",
-    image: "https://images.unsplash.com/photo-1708388464667-c1b1c97fbae3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxiYXJiZWN1ZSUyMHBsYXR0ZXJ8ZW58MHx8fHwxNzU1Nzg0MjcyfDA&ixlib=rb-4.1.0&q=80&w=1080",
-    aiHint: "barbecue platter"
-  },
-];
-
-
 const AdminDashboardPage = () => {
-    const { menuItems, fetchMenuItems } = useMenuStore();
+    const { menuItems, fetchMenuItems, isLoading: isMenuLoading } = useMenuStore();
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
     const [reservationCount, setReservationCount] = useState(0);
@@ -112,12 +91,16 @@ const AdminDashboardPage = () => {
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Homepage Signature Dishes</CardTitle>
-                                    <Star className="h-4 w-4 text-muted-foreground" />
+                                    <CardTitle className="text-sm font-medium">Total Menu Items</CardTitle>
+                                    <Utensils className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{signatureDishes.length}</div>
-                                    <p className="text-xs text-muted-foreground">dishes featured on the homepage</p>
+                                    <div className="text-2xl font-bold">
+                                        {isMenuLoading ? '...' : menuItems.length}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        items available on the menu
+                                    </p>
                                 </CardContent>
                             </Card>
                             <Card>
