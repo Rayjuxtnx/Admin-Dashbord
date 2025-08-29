@@ -48,7 +48,7 @@ export function AppHeader() {
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <Link href="/login" passHref>
+            <Link href="/login">
               <DropdownMenuItem>Log out</DropdownMenuItem>
             </Link>
           </DropdownMenuContent>

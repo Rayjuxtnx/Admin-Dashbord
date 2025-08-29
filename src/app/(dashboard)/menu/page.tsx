@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MoreVertical, PlusCircle, FilePenLine, Trash2 } from "lucide-react"
+import { MoreVertical, PlusCircle, FilePenLine, Trash2, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,15 +23,17 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabase"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useTransition } from "react"
+import { getMenuItems, deleteMenuItem, upsertMenuItem } from "./actions"
+import { cn } from "@/lib/utils"
 
-type MenuItem = {
+
+export type MenuItem = {
     id: string;
     name: string;
     price: string;
@@ -44,14 +46,11 @@ export default function MenuPage() {
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
     const [selectedItem, setSelectedItem] = useState<MenuItem | undefined>(undefined);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [isPending, startTransition] = useTransition();
 
     const fetchMenuItems = async () => {
-        const { data, error } = await supabase.from('menu_items').select('*');
-        if (error) {
-            console.error("Error fetching menu items:", error);
-        } else {
-            setMenuItems(data as MenuItem[]);
-        }
+        const data = await getMenuItems();
+        setMenuItems(data as MenuItem[]);
     };
 
     useEffect(() => {
@@ -71,10 +70,9 @@ export default function MenuPage() {
     }, []);
 
     const handleDelete = async (id: string) => {
-        const { error } = await supabase.from('menu_items').delete().eq('id', id);
-        if (error) {
-            console.error("Error deleting item:", error);
-        }
+       startTransition(async () => {
+           await deleteMenuItem(id);
+       })
     };
 
     const openSheetForNew = () => {
@@ -103,7 +101,7 @@ export default function MenuPage() {
         </Button>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className={cn("grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", isPending && "opacity-50")}>
         {menuItems.map((item) => (
           <Card key={item.id} className="flex flex-col overflow-hidden">
             <CardHeader className="relative p-0">
@@ -118,8 +116,8 @@ export default function MenuPage() {
                  <div className="absolute right-2 top-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-background/70 backdrop-blur-sm">
-                                <MoreVertical className="h-4 w-4" />
+                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-background/70 backdrop-blur-sm" disabled={isPending}>
+                               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -152,25 +150,16 @@ export default function MenuPage() {
 
 
 function MenuFormSheet({ item, closeSheet }: { item?: MenuItem, closeSheet: () => void }) {
+    const [isPending, startTransition] = useTransition();
+
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const name = formData.get('name') as string;
-        const price = formData.get('price') as string;
-        const description = formData.get('description') as string;
-
-        const record = { name, price, description };
-
-        if (item?.id) {
-            // Update
-            const { error } = await supabase.from('menu_items').update(record).eq('id', item.id);
-            if (error) console.error("Error updating item:", error);
-        } else {
-            // Create
-            const { error } = await supabase.from('menu_items').insert(record);
-            if (error) console.error("Error creating item:", error);
-        }
-        closeSheet();
+        
+        startTransition(async () => {
+            const formData = new FormData(event.currentTarget);
+            await upsertMenuItem(formData, item?.id);
+            closeSheet();
+        });
     };
 
     return (
@@ -184,21 +173,24 @@ function MenuFormSheet({ item, closeSheet }: { item?: MenuItem, closeSheet: () =
             <form className="grid gap-4 py-8" onSubmit={handleSubmit}>
                 <div className="grid gap-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input id="name" name="name" defaultValue={item?.name} />
+                    <Input id="name" name="name" defaultValue={item?.name} disabled={isPending} />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="price">Price</Label>
-                    <Input id="price" name="price" defaultValue={item?.price} />
+                    <Input id="price" name="price" defaultValue={item?.price} disabled={isPending} />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" name="description" defaultValue={item?.description} />
+                    <Textarea id="description" name="description" defaultValue={item?.description} disabled={isPending} />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="picture">Picture</Label>
-                    <Input id="picture" name="picture" type="file" />
+                    <Input id="picture" name="picture" type="file" disabled={isPending} />
                 </div>
-                <Button type="submit" className="mt-4">{item ? "Save Changes" : "Create Item"}</Button>
+                <Button type="submit" className="mt-4" disabled={isPending}>
+                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {item ? "Save Changes" : "Create Item"}
+                </Button>
             </form>
         </SheetContent>
     )

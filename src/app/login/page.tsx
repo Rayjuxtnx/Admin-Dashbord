@@ -44,11 +44,11 @@ export default function LoginPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" required  className="text-base"/>
             </div>
-            <Button type="submit" className="w-full text-base font-bold" asChild>
-              <Link href="/">
+            <Link href="/" className="block w-full">
+              <Button type="submit" className="w-full text-base font-bold">
                 Sign In
-              </Link>
-            </Button>
+              </Button>
+            </Link>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useTransition } from "react"
 import {
   Table,
   TableBody,
@@ -17,11 +17,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Trash2, CheckCircle, XCircle, Clock } from "lucide-react"
+import { MoreHorizontal, Trash2, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
+import { getReservations, updateReservationStatus, deleteReservation } from "./actions"
 
-type Reservation = {
+export type Reservation = {
   id: string
   customer: string
   date: string
@@ -40,14 +41,11 @@ const statusStyles: { [key: string]: string } = {
 
 export default function ReservationsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([])
+  const [isPending, startTransition] = useTransition();
 
   const fetchReservations = async () => {
-    const { data, error } = await supabase.from('reservations').select('*').order('date', { ascending: false });
-    if (error) {
-      console.error('Error fetching reservations:', error)
-    } else if (data) {
-      setReservations(data as Reservation[])
-    }
+    const data = await getReservations();
+    setReservations(data as Reservation[]);
   }
 
   useEffect(() => {
@@ -69,18 +67,16 @@ export default function ReservationsPage() {
     }
   }, [])
 
-  const updateReservationStatus = async (id: string, status: Reservation['status']) => {
-    const { error } = await supabase.from('reservations').update({ status }).eq('id', id);
-    if (error) {
-      console.error('Error updating reservation status:', error);
-    }
+  const handleUpdateStatus = (id: string, status: Reservation['status']) => {
+    startTransition(async () => {
+      await updateReservationStatus(id, status);
+    });
   };
 
-  const deleteReservation = async (id: string) => {
-    const { error } = await supabase.from('reservations').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting reservation:', error);
-    }
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      await deleteReservation(id);
+    });
   };
 
   return (
@@ -94,7 +90,7 @@ export default function ReservationsPage() {
         </p>
       </header>
 
-      <div className="overflow-hidden rounded-lg border shadow-sm">
+      <div className={cn("overflow-hidden rounded-lg border shadow-sm", isPending && "opacity-50")}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -121,15 +117,15 @@ export default function ReservationsPage() {
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" disabled={isPending}>
+                        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => updateReservationStatus(reservation.id, 'Paid')}><CheckCircle className="mr-2 h-4 w-4" />Mark as Paid</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => updateReservationStatus(reservation.id, 'Pending')}><Clock className="mr-2 h-4 w-4" />Mark as Pending</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => updateReservationStatus(reservation.id, 'Cancelled')}><XCircle className="mr-2 h-4 w-4" />Mark as Cancelled</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => deleteReservation(reservation.id)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleUpdateStatus(reservation.id, 'Paid')}><CheckCircle className="mr-2 h-4 w-4" />Mark as Paid</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleUpdateStatus(reservation.id, 'Pending')}><Clock className="mr-2 h-4 w-4" />Mark as Pending</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleUpdateStatus(reservation.id, 'Cancelled')}><XCircle className="mr-2 h-4 w-4" />Mark as Cancelled</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(reservation.id)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
