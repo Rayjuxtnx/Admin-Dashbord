@@ -14,7 +14,7 @@ import {
 import QrCode from "@/components/QrCode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { MenuItem } from "@/lib/menuData";
+import { MenuItem, MenuData } from "@/lib/menuData";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -28,12 +28,12 @@ import {
 import { useMenuStore } from "@/lib/menuStore";
 
 
-type MenuCategoryTitle = 'Tasty Starters' | 'Mombasa Style Chapatis' | 'Salads' | 'Breakfast' | 'Sandwiches/Burgers/Steaks' | 'Chicken Dishes' | 'BEEF /MUTTON DISHES' | 'MIXED GRILL PLATTERS' | 'SEAFOOD DISHES' | 'Special Tasty Curries' | 'Vegetarian Dishes' | 'Kiddy Meals' | 'Mini - Lunches' | 'Soups' | 'Tasty Rice Dishes' | 'FAMILY PACKS DISHES' | 'SHARWAMA SPECIAL' | 'TASTY SWAHILI SIDE DISHES' | 'Drinks' | 'Fresh Juices' | 'Milkshakes' | 'Health Drinks' | 'Smoothies';
+type MenuCategoryTitle = keyof MenuData;
 type FilterCategory = 'All' | MenuCategoryTitle;
 
 const MenuPage = () => {
   const qrCodeRef = useRef<HTMLDivElement>(null);
-  const { menuData } = useMenuStore();
+  const { menuItems } = useMenuStore();
   const [isClient, setIsClient] = useState(false);
   const [menuUrl, setMenuUrl] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,31 +47,25 @@ const MenuPage = () => {
     }
   }, []);
 
-  const menuCategoriesList: { title: MenuCategoryTitle, items: MenuItem[] }[] = useMemo(() => [
-      { title: "Breakfast", items: menuData.breakfast },
-      { title: "Soups", items: menuData.soups },
-      { title: "Tasty Starters", items: menuData.tastyStarters },
-      { title: "Salads", items: menuData.salads },
-      { title: "SHARWAMA SPECIAL", items: menuData.sharwamaSpecial },
-      { title: "Mombasa Style Chapatis", items: menuData.mombasaStyleChapatis },
-      { title: "Special Tasty Curries", items: menuData.specialTastyCurries },
-      { title: "Vegetarian Dishes", items: menuData.vegetarianDishes },
-      { title: "Chicken Dishes", items: menuData.chickenDishes },
-      { title: "BEEF /MUTTON DISHES", items: menuData.beefAndMuttonDishes },
-      { title: "SEAFOOD DISHES", items: menuData.seafoodDishes },
-      { title: "MIXED GRILL PLATTERS", items: menuData.mixedGrillPlatters },
-      { title: "FAMILY PACKS DISHES", items: menuData.familyPacksDishes },
-      { title: "Sandwiches/Burgers/Steaks", items: menuData.sandwichesAndMore },
-      { title: "Tasty Rice Dishes", items: menuData.tastyRiceDishes },
-      { title: "TASTY SWAHILI SIDE DISHES", items: menuData.tastySwahiliSideDishes },
-      { title: "Kiddy Meals", items: menuData.kiddyMeals },
-      { title: "Mini - Lunches", items: menuData.miniLunches },
-      { title: "Drinks", items: menuData.drinks },
-      { title: "Fresh Juices", items: menuData.freshJuices },
-      { title: "Health Drinks", items: menuData.healthDrinks },
-      { title: "Smoothies", items: menuData.smoothies },
-      { title: "Milkshakes", items: menuData.milkshakes },
-  ], [menuData]);
+  const menuCategoriesList = useMemo(() => {
+    const categories: { [key in MenuCategoryTitle]: MenuItem[] } = {
+        tastyStarters: [], mombasaStyleChapatis: [], salads: [], breakfast: [],
+        sandwichesAndMore: [], chickenDishes: [], beefAndMuttonDishes: [],
+        mixedGrillPlatters: [], seafoodDishes: [], specialTastyCurries: [],
+        vegetarianDishes: [], kiddyMeals: [], miniLunches: [], soups: [],
+        tastyRiceDishes: [], familyPacksDishes: [], sharwamaSpecial: [],
+        tastySwahiliSideDishes: [], drinks: [], freshJuices: [], milkshakes: [],
+        healthDrinks: [], smoothies: []
+    };
+    menuItems.forEach(item => {
+        if (categories[item.category]) {
+            categories[item.category].push(item);
+        }
+    });
+    return Object.keys(categories)
+        .map(key => ({ title: key as MenuCategoryTitle, items: categories[key as MenuCategoryTitle] }))
+        .sort((a,b) => a.title.localeCompare(b.title));
+  }, [menuItems]);
 
   const handleDownload = () => {
     const svgElement = qrCodeRef.current?.querySelector('svg');
@@ -129,6 +123,12 @@ const MenuPage = () => {
     return null; // or a loading spinner
   }
 
+  const formatCategoryTitle = (title: string) => {
+    return title
+        .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
+        .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+        .trim();
+  }
 
   return (
     <div className="bg-background">
@@ -178,7 +178,7 @@ const MenuPage = () => {
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full justify-between">
-                <span>{selectedCategory === 'All' ? 'Filter by Category' : selectedCategory}</span>
+                <span>{selectedCategory === 'All' ? 'Filter by Category' : formatCategoryTitle(selectedCategory)}</span>
                 <ChevronsUpDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
@@ -189,7 +189,7 @@ const MenuPage = () => {
                 <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
                 {menuCategoriesList.map(cat => (
                   <DropdownMenuRadioItem key={cat.title} value={cat.title} className={cn(cat.items.length === 0 && "hidden")}>
-                    {cat.title}
+                    {formatCategoryTitle(cat.title)}
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
@@ -203,7 +203,7 @@ const MenuPage = () => {
                 filteredMenuCategories.map(category => (
                     <div key={category.title}>
                         <h2 className="font-headline text-3xl md:text-4xl font-bold text-primary border-b pb-2 text-center">
-                            {category.title}
+                            {formatCategoryTitle(category.title)}
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                             {category.items.map((item) => (

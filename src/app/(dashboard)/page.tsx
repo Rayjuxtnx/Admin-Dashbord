@@ -28,14 +28,14 @@ const blogPosts = [
 ];
 
 const AdminDashboardPage = () => {
-    const { menuData } = useMenuStore();
+    const { menuItems } = useMenuStore();
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
     const [reservationCount, setReservationCount] = useState(0);
 
     const allMenuItems = useMemo(() => {
-        return Object.values(menuData).flat();
-    }, [menuData]);
+        return menuItems || [];
+    }, [menuItems]);
 
 
     useEffect(() => {

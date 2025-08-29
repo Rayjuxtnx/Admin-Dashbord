@@ -1,9 +1,10 @@
 export type MenuItem = {
-    id: string;
+    slug: string;
     name: string;
     price: string;
     description: string;
-    image?: string;
+    image: string;
+    category: keyof MenuData;
 };
 
 export type MenuData = {
