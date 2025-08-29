@@ -326,7 +326,10 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 
     if (error) {
         console.error("Error fetching menu items:", error);
-        throw new Error("Failed to fetch menu items.");
+        if (error.message.includes("relation \"menu_items\" does not exist")) {
+             throw new Error("The 'menu_items' table does not exist in your database. Please create it in your Supabase dashboard.");
+        }
+        throw new Error("Failed to fetch menu items from the database.");
     }
     return data as MenuItem[];
 };
