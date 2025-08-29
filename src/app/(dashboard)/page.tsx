@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { getReservations } from "./actions";
 import { getTotalMenuItems } from "@/lib/menuData";
-import MenuManagement from "./MenuManagement";
 
 const blogPosts = [
   {
@@ -151,7 +150,6 @@ const AdminDashboardPage = () => {
                         </div>
                     </TabsContent>
                 </Tabs>
-                <MenuManagement />
             </div>
         </div>
     );
