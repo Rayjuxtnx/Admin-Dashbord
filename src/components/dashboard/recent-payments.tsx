@@ -8,7 +8,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 
@@ -22,6 +21,7 @@ type Payment = {
 
 export function RecentPayments() {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -33,9 +33,12 @@ export function RecentPayments() {
         .limit(5);
 
       if (error) {
-        console.error("Error fetching recent payments:", error);
+        console.error("Error fetching recent payments:", error.message);
+        setError("Could not fetch recent payments. Please check your database permissions.");
+        setPayments([]);
       } else {
         setPayments(data || []);
+        setError(null);
       }
     };
 
@@ -74,8 +77,10 @@ export function RecentPayments() {
         <CardDescription>Most recent successful payments.</CardDescription>
       </CardHeader>
       <CardContent>
-        {payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No recent verified payments.</p>
+        {error ? (
+           <p className="text-sm text-destructive text-center py-8">{error}</p>
+        ) : payments.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No recent verified payments found.</p>
         ) : (
           <div className="space-y-6">
             {payments.map((payment) => (
