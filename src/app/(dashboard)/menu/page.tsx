@@ -1,206 +1,278 @@
-'use client'
 
-import Image from "next/image"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { MoreVertical, PlusCircle, FilePenLine, Trash2, Loader2 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { supabase } from "@/lib/supabase"
-import { useState, useEffect, useTransition } from "react"
-import { getMenuItems, deleteMenuItem, upsertMenuItem } from "./actions"
-import { cn } from "@/lib/utils"
+"use client";
 
+import { MenuItem, menuData } from "@/lib/menuData";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Pencil, Trash2, Image as ImageIcon, PlusCircle } from "lucide-react";
+import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import MediaUploader from "./MediaUploader";
+import { useMenuStore } from "@/lib/menuStore";
 
-export type MenuItem = {
-    id: string;
-    name: string;
-    price: string;
-    description: string;
-    image: string;
-    dataAiHint: string;
-}
+const MenuManagement = () => {
+    const { toast } = useToast();
+    const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, setMenuItems } = useMenuStore();
+    const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+    const [newItem, setNewItem] = useState<Omit<MenuItem, 'slug'>>({ name: '', price: '', description: '', image: 'https://picsum.photos/600/400', dataAiHint: '' });
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isChangePictureOpen, setIsChangePictureOpen] = useState(false);
 
-export default function MenuPage() {
-    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-    const [selectedItem, setSelectedItem] = useState<MenuItem | undefined>(undefined);
-    const [isSheetOpen, setIsSheetOpen] = useState(false);
-    const [isPending, startTransition] = useTransition();
-
-    const fetchMenuItems = async () => {
-        // const data = await getMenuItems();
-        // setMenuItems(data as MenuItem[]);
-    };
+    // This effect handles hydration mismatch between server and client
+    const [hydratedMenuItems, setHydratedMenuItems] = useState<MenuItem[]>([]);
+    useEffect(() => {
+        setMenuItems(menuData);
+    }, [setMenuItems]);
 
     useEffect(() => {
-        fetchMenuItems();
-        // const channel = supabase
-        //     .channel('realtime menu_items')
-        //     .on(
-        //         'postgres_changes',
-        //         { event: '*', schema: 'public', table: 'menu_items' },
-        //         () => fetchMenuItems()
-        //     )
-        //     .subscribe();
+        setHydratedMenuItems(menuItems);
+    }, [menuItems]);
 
-        // return () => {
-        //     supabase.removeChannel(channel);
-        // };
-    }, []);
 
-    const handleDelete = async (id: string) => {
-       startTransition(async () => {
-           await deleteMenuItem(id);
-       })
+    const handleEditClick = (item: MenuItem) => {
+        setSelectedItem({...item});
+        setIsEditDialogOpen(true);
     };
 
-    const openSheetForNew = () => {
-        setSelectedItem(undefined);
-        setIsSheetOpen(true);
-    };
-
-    const openSheetForEdit = (item: MenuItem) => {
+    const handleDeleteClick = (item: MenuItem) => {
         setSelectedItem(item);
-        setIsSheetOpen(true);
+        setIsDeleteDialogOpen(true);
     };
+    
+    const handleChangePictureClick = (item: MenuItem) => {
+        setSelectedItem(item);
+        setIsChangePictureOpen(true);
+    }
 
-  return (
-    <div className="flex flex-col gap-8">
-      <header className="flex items-center justify-between">
-        <div>
-            <h1 className="text-3xl font-bold font-headline tracking-tight">
-            Menu Management
-            </h1>
-            <p className="text-muted-foreground">
-            Add, edit, or delete items from your restaurant's menu.
-            </p>
-        </div>
-        <Button onClick={openSheetForNew}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
-        </Button>
-      </header>
-      
-      {menuItems.length === 0 && (
-          <Card className="flex items-center justify-center min-h-[300px]">
-              <CardContent className="text-center">
-                  <p className="text-muted-foreground">No menu items found.</p>
-                  <p className="text-sm text-muted-foreground">Click "Add New Item" to get started.</p>
-              </CardContent>
-          </Card>
-      )}
-
-      <div className={cn("grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", isPending && "opacity-50")}>
-        {menuItems.map((item) => (
-          <Card key={item.id} className="flex flex-col overflow-hidden">
-            <CardHeader className="relative p-0">
-                <Image
-                    src={item.image || 'https://picsum.photos/600/400'}
-                    alt={item.name}
-                    width={600}
-                    height={400}
-                    className="aspect-video w-full object-cover"
-                    data-ai-hint={item.dataAiHint}
-                />
-                 <div className="absolute right-2 top-2">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-background/70 backdrop-blur-sm" disabled={isPending}>
-                               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => openSheetForEdit(item)}>
-                                <FilePenLine className="mr-2 h-4 w-4" />Edit Item
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => item.id && handleDelete(item.id)}>
-                                <Trash2 className="mr-2 h-4 w-4" />Delete Item
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </CardHeader>
-            <CardContent className="flex-1 p-4">
-              <CardTitle className="mb-1 text-lg font-headline">{item.name}</CardTitle>
-              <CardDescription>{item.description}</CardDescription>
-            </CardContent>
-            <CardFooter className="p-4 pt-0">
-              <p className="font-semibold text-primary">{item.price}</p>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <MenuFormSheet item={selectedItem} closeSheet={() => setIsSheetOpen(false)} />
-       </Sheet>
-    </div>
-  )
-}
-
-
-function MenuFormSheet({ item, closeSheet }: { item?: MenuItem, closeSheet: () => void }) {
-    const [isPending, startTransition] = useTransition();
-
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleSaveChanges = () => {
+        if (!selectedItem) return;
         
-        startTransition(async () => {
-            const formData = new FormData(event.currentTarget);
-            await upsertMenuItem(formData, item?.id);
-            closeSheet();
+        updateMenuItem(selectedItem);
+        
+        toast({
+            title: "Item Updated",
+            description: `${selectedItem.name} has been successfully updated.`,
         });
+        setIsEditDialogOpen(false);
+        setSelectedItem(null);
     };
+
+    const handleDeleteConfirm = () => {
+        if (!selectedItem) return;
+
+        deleteMenuItem(selectedItem.slug);
+        
+        toast({
+            title: "Item Deleted",
+            description: `${selectedItem.name} has been removed from the menu.`,
+        });
+        setIsDeleteDialogOpen(false);
+        setSelectedItem(null);
+    };
+    
+    const handleAddNewItem = () => {
+        addMenuItem(newItem);
+        toast({
+            title: "Item Added",
+            description: `${newItem.name} has been successfully added to the menu.`,
+        });
+        setIsAddDialogOpen(false);
+        setNewItem({ name: '', price: '', description: '', image: 'https://picsum.photos/600/400', dataAiHint: '' });
+    }
+
+    const handleImageUpload = (newImageUrl: string) => {
+        if (!selectedItem) return;
+
+        const updatedItem = { ...selectedItem, image: newImageUrl };
+        updateMenuItem(updatedItem);
+
+        toast({
+            title: "Image Updated",
+            description: `The image for ${selectedItem.name} has been successfully changed.`,
+        });
+        
+        setIsChangePictureOpen(false);
+        setSelectedItem(null);
+    }
 
     return (
-        <SheetContent className="sm:max-w-lg">
-            <SheetHeader>
-                <SheetTitle className="font-headline">{item ? "Edit Menu Item" : "Add New Menu Item"}</SheetTitle>
-                <SheetDescription>
-                    {item ? "Update the details for this menu item." : "Fill out the form to add a new item to your menu."}
-                </SheetDescription>
-            </SheetHeader>
-            <form className="grid gap-4 py-8" onSubmit={handleSubmit}>
-                <div className="grid gap-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input id="name" name="name" defaultValue={item?.name} disabled={isPending} />
+        <>
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline tracking-tight">
+                    Menu Management
+                    </h1>
+                    <p className="text-muted-foreground">
+                    Add, edit, or delete items from your restaurant's menu.
+                    </p>
                 </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="price">Price</Label>
-                    <Input id="price" name="price" defaultValue={item?.price} disabled={isPending} />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" name="description" defaultValue={item?.description} disabled={isPending} />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="picture">Picture</Label>
-                    <Input id="picture" name="picture" type="file" disabled={isPending} />
-                </div>
-                <Button type="submit" className="mt-4" disabled={isPending}>
-                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {item ? "Save Changes" : "Create Item"}
+                <Button onClick={() => setIsAddDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
                 </Button>
-            </form>
-        </SheetContent>
-    )
-}
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Menu Items</CardTitle>
+                    <CardDescription>Manage your restaurant's menu. You can edit, delete, or change images for any item.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="hidden w-[100px] sm:table-cell">Image</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Price</TableHead>
+                                <TableHead className="hidden md:table-cell">Description</TableHead>
+                                <TableHead>
+                                    <span className="sr-only">Actions</span>
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {hydratedMenuItems.map((item) => (
+                                <TableRow key={`${item.slug}-${item.name}`}>
+                                    <TableCell className="hidden sm:table-cell">
+                                        <Image
+                                            alt={item.name}
+                                            className="aspect-square rounded-md object-cover"
+                                            height="64"
+                                            src={item.image}
+                                            width="64"
+                                            data-ai-hint={item.dataAiHint}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell>{item.price}</TableCell>
+                                    <TableCell className="hidden md:table-cell max-w-sm truncate">{item.description}</TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">Toggle menu</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onSelect={() => handleEditClick(item)}>
+                                                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handleChangePictureClick(item)}>
+                                                    <ImageIcon className="mr-2 h-4 w-4" /> Change Picture
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handleDeleteClick(item)} className="text-destructive focus:text-destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            
+            {/* Add Item Dialog */}
+             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Menu Item</DialogTitle>
+                        <DialogDescription>Fill out the details for the new menu item.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="new-name" className="text-right">Name</Label>
+                            <Input id="new-name" value={newItem.name} onChange={(e) => setNewItem(prev => ({...prev, name: e.target.value}))} className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="new-price" className="text-right">Price</Label>
+                            <Input id="new-price" value={newItem.price} onChange={(e) => setNewItem(prev => ({...prev, price: e.target.value}))} className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="new-description" className="text-right">Description</Label>
+                            <Textarea id="new-description" value={newItem.description} onChange={(e) => setNewItem(prev => ({...prev, description: e.target.value}))} className="col-span-3" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button onClick={handleAddNewItem}>Add Item</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Item Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit: {selectedItem?.name}</DialogTitle>
+                        <DialogDescription>Make changes to this menu item. Click save when you're done.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">Name</Label>
+                            <Input id="name" value={selectedItem?.name || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, name: e.target.value} : null)} className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="price" className="text-right">Price</Label>
+                            <Input id="price" value={selectedItem?.price || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, price: e.target.value} : null)} className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="description" className="text-right">Description</Label>
+                            <Textarea id="description" value={selectedItem?.description || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, description: e.target.value} : null)} className="col-span-3" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button onClick={handleSaveChanges}>Save Changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Are you sure you want to delete this item?</DialogTitle>
+                        <DialogDescription>
+                           This action cannot be undone. This will permanently delete the item: <span className="font-semibold text-foreground">{selectedItem?.name}</span>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button variant="destructive" onClick={handleDeleteConfirm}>Yes, Delete Item</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            
+            {/* Change Picture Dialog */}
+            <Dialog open={isChangePictureOpen} onOpenChange={setIsChangePictureOpen}>
+                <DialogContent className="max-w-4xl">
+                     <DialogHeader>
+                        <DialogTitle>Change Picture for: {selectedItem?.name}</DialogTitle>
+                        <DialogDescription>
+                           Upload a new image or video for this menu item.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <MediaUploader onImageUpload={handleImageUpload} />
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+        </>
+    );
+};
+
+export default MenuManagement;
