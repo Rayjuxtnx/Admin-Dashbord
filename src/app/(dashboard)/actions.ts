@@ -1,17 +1,14 @@
 'use server'
 
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import { revalidatePath } from "next/cache";
 import { MenuItem } from '@/lib/menuData';
 
-// Note: use the service role key to bypass RLS
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Initialize the Supabase client once for all functions in this file
+const supabase = await createServiceRoleClient();
 
-async function ensureBucketExists(supabase: any, bucketName: string) {
+async function ensureBucketExists(bucketName: string) {
     const { data: buckets, error } = await supabase.storage.listBuckets();
 
     if (error) {
@@ -44,7 +41,7 @@ export async function uploadMedia(formData: FormData) {
     throw new Error('No file provided');
   }
   
-  await ensureBucketExists(supabase, bucket);
+  await ensureBucketExists(bucket);
 
   const filePath = `${Date.now()}-${file.name}`;
 
