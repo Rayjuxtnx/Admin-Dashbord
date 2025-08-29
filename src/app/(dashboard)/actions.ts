@@ -12,7 +12,7 @@ import type { BlogPost } from '@/lib/blogStore';
 const supabase = createServiceRoleClient();
 
 async function ensureBucketExists(bucketName: string) {
-    const { data: buckets, error } = await (await supabase).storage.listBuckets();
+    const { data: buckets, error } = await supabase.storage.listBuckets();
 
     if (error) {
         console.error("Error listing buckets:", error);
@@ -23,7 +23,7 @@ async function ensureBucketExists(bucketName: string) {
 
     if (!bucketExists) {
         console.log(`Bucket '${bucketName}' not found. Creating it.`);
-        const { error: createError } = await (await supabase).storage.createBucket(bucketName, {
+        const { error: createError } = await supabase.storage.createBucket(bucketName, {
             public: true, // Set to true so media URLs are publicly accessible
         });
 
@@ -39,6 +39,8 @@ async function ensureBucketExists(bucketName: string) {
 export async function uploadMedia(formData: FormData) {
   const file = formData.get('file') as File;
   const bucket = 'media';
+  const purpose = formData.get('purpose') as 'homepage_hero' | 'gallery';
+
 
   if (!file) {
     throw new Error('No file provided');
@@ -46,9 +48,9 @@ export async function uploadMedia(formData: FormData) {
   
   await ensureBucketExists(bucket);
 
-  const filePath = `${Date.now()}-${file.name}`;
+  const filePath = `${purpose}/${Date.now()}-${file.name.replace(/\s/g, '_')}`;
 
-  const { data: uploadData, error: uploadError } = await (await supabase).storage
+  const { data: uploadData, error: uploadError } = await supabase.storage
     .from(bucket)
     .upload(filePath, file);
 
@@ -57,7 +59,7 @@ export async function uploadMedia(formData: FormData) {
     throw new Error('Failed to upload file to Supabase Storage.', { cause: uploadError });
   }
 
-  const { data: publicUrlData } = (await supabase).storage
+  const { data: publicUrlData } = supabase.storage
     .from(bucket)
     .getPublicUrl(uploadData.path);
   
@@ -72,17 +74,18 @@ export async function uploadMedia(formData: FormData) {
     path: uploadData.path,
     type: file.type.startsWith('video') ? 'video' : 'image',
     alt_text: file.name,
-    purpose: formData.get('purpose') as string || 'gallery',
+    purpose: purpose || 'gallery',
   };
 
-  const { data: dbData, error: dbError } = await (await supabase)
+  const { data: dbData, error: dbError } = await supabase
     .from('gallery')
     .insert(metadata)
-    .select();
+    .select()
+    .single();
 
   if (dbError) {
     console.error('Database Insert Error:', dbError);
-    await (await supabase).storage.from(bucket).remove([uploadData.path]);
+    await supabase.storage.from(bucket).remove([uploadData.path]);
     throw new Error('Failed to save media metadata to the database.', { cause: dbError });
   }
 
@@ -91,15 +94,18 @@ export async function uploadMedia(formData: FormData) {
   revalidatePath('/');
   revalidatePath('/admin');
   revalidatePath('/gallery');
+  revalidatePath('/video-gallery');
+  revalidatePath('/homepage-media');
 
-  return dbData[0];
+
+  return dbData;
 }
 
+
 export async function getGalleryMedia() {
-    const { data, error } = await (await supabase)
+    const { data, error } = await supabase
         .from('gallery')
-        .select('url, type, alt_text')
-        .eq('purpose', 'gallery')
+        .select('id, url, type, alt_text, purpose, created_at')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -109,8 +115,33 @@ export async function getGalleryMedia() {
     return data;
 }
 
+export async function deleteGalleryMedia(id: number, path: string) {
+    const { error: dbError } = await supabase
+        .from('gallery')
+        .delete()
+        .eq('id', id);
+
+    if (dbError) {
+        console.error("Error deleting media from database:", dbError);
+        throw new Error("Failed to delete media from database.");
+    }
+    
+    const { error: storageError } = await supabase.storage
+        .from('media')
+        .remove([path]);
+        
+    if (storageError) {
+        console.error("Error deleting media from storage:", storageError);
+        // Don't throw, as the DB entry is already gone. Log it for manual cleanup.
+    }
+
+    revalidatePath('/gallery');
+    revalidatePath('/video-gallery');
+    revalidatePath('/homepage-media');
+}
+
 export async function getRecentPayments() {
-  const { data, error } = await (await supabase)
+  const { data, error } = await supabase
     .from('payments')
     .select('phone_number, amount, created_at')
     .order('created_at', { ascending: false })
@@ -131,7 +162,7 @@ const parseAmount = (amount: any) => {
 
 export async function getSalesDataForChart() {
     // Fetch online payments (STK push)
-    const { data: onlineSales, error: onlineError } = await (await supabase)
+    const { data: onlineSales, error: onlineError } = await supabase
         .from('payments')
         .select('amount, created_at') // use created_at instead of date
         .eq('type', 'online');
@@ -142,7 +173,7 @@ export async function getSalesDataForChart() {
     }
 
     // Fetch verified manual payments from the new table
-    const { data: manualSales, error: manualError } = await (await supabase)
+    const { data: manualSales, error: manualError } = await supabase
         .from('payments')
         .select('amount, created_at') // use created_at instead of date
         .eq('type', 'manual');
@@ -160,7 +191,7 @@ export async function getSalesDataForChart() {
 
 
 export async function getDashboardCounts() {
-    const { count: reservationsCount, error: reservationsError } = await (await supabase)
+    const { count: reservationsCount, error: reservationsError } = await supabase
         .from('reservations')
         .select('*', { count: 'exact', head: true });
     
@@ -168,7 +199,7 @@ export async function getDashboardCounts() {
         console.error('Error fetching reservations count:', reservationsError);
     }
     
-    const { data: paymentsData, error: paymentsError } = await (await supabase)
+    const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
         .select('amount');
 
@@ -183,7 +214,7 @@ export async function getDashboardCounts() {
         console.error("Error fetching payments:", paymentsError);
     }
 
-    const { count: publishedBlogsCount, error: blogsError } = await (await supabase)
+    const { count: publishedBlogsCount, error: blogsError } = await supabase
         .from('blogs')
         .select('*', { count: 'exact', head: true })
         .eq('published', true);
@@ -191,18 +222,29 @@ export async function getDashboardCounts() {
     if (blogsError) {
         console.error('Error fetching blogs count:', blogsError);
     }
+    
+    const { count: videosCount, error: videosError } = await supabase
+        .from('gallery')
+        .select('*', { count: 'exact', head: true })
+        .eq('type', 'video')
+        .eq('purpose', 'homepage_hero');
+        
+    if (videosError) {
+        console.error('Error fetching videos count:', videosError);
+    }
 
 
     return {
         reservationsCount: reservationsCount ?? 0,
         totalPayments,
         publishedBlogsCount: publishedBlogsCount ?? 0,
+        videosCount: videosCount ?? 0,
     };
 }
 
 
 export async function getReservations() {
-  const { data, error } = await (await supabase)
+  const { data, error } = await supabase
     .from('reservations')
     .select('*')
     .order('created_at', { ascending: false });
@@ -215,7 +257,7 @@ export async function getReservations() {
 }
 
 export async function updateReservationStatus(id: number, status: 'paid' | 'pending' | 'cancelled' | 'not_paid') {
-    const { error } = await (await supabase)
+    const { error } = await supabase
         .from('reservations')
         .update({ payment_status: status })
         .eq('id', id);
@@ -228,7 +270,7 @@ export async function updateReservationStatus(id: number, status: 'paid' | 'pend
 }
 
 export async function deleteReservation(id: number) {
-    const { error } = await (await supabase)
+    const { error } = await supabase
         .from('reservations')
         .delete()
         .eq('id', id);
@@ -241,7 +283,7 @@ export async function deleteReservation(id: number) {
 }
 
 export async function submitManualPaymentConfirmation(formData: { name: string; phone: string; mpesaCode: string; amount: number; paymentTime: string; }) {
-    const { data, error } = await (await supabase)
+    const { data, error } = await supabase
         .from('manual_confirmations')
         .insert({
             mpesa_code: formData.mpesaCode,
@@ -265,7 +307,7 @@ export async function submitManualPaymentConfirmation(formData: { name: string; 
 }
 
 export async function getManualConfirmations() {
-  const { data, error } = await (await supabase)
+  const { data, error } = await supabase
     .from('manual_confirmations')
     .select('*')
     .order('created_at', { ascending: false });
@@ -278,7 +320,7 @@ export async function getManualConfirmations() {
 }
 
 export async function updateConfirmationStatus(id: number, status: 'verified' | 'pending' | 'invalid') {
-    const { error } = await (await supabase)
+    const { error } = await supabase
         .from('manual_confirmations')
         .update({ status: status })
         .eq('id', id);
@@ -291,35 +333,9 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
 }
 
 
-export async function getHomepageMedia() {
-    const { data, error } = await (await supabase)
-        .from('homepage_media')
-        .select('id, value');
-
-    if (error) {
-        console.error("Error fetching homepage media:", error);
-        return { heroImageUrl: null, heroVideoUrl: null };
-    }
-    
-    if (!data) {
-        return { heroImageUrl: null, heroVideoUrl: null };
-    }
-
-    const media: { [key: string]: string } = {};
-    data.forEach(item => {
-        media[item.id] = item.value;
-    });
-
-    return {
-        heroImageUrl: media.hero_image_url || 'https://picsum.photos/1200/800?random=10',
-        heroVideoUrl: media.hero_video_url || 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
-    };
-}
-
-
 // Server actions for menu items
 export async function getMenuItems(): Promise<MenuItem[]> {
-    const { data, error } = await (await supabase)
+    const { data, error } = await supabase
         .from('menu_items')
         .select('*')
         .order('name', { ascending: true });
@@ -327,7 +343,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
     if (error) {
         console.error("Error fetching menu items:", error);
         if (error.message.includes("relation \"menu_items\" does not exist")) {
-             throw new Error("The 'menu_items' table does not exist in your database. Please create it in your Supabase dashboard.");
+             throw new Error("The 'menu_items' table does not exist in your database. Please create it first in the Supabase dashboard.");
         }
         throw new Error("Failed to fetch menu items from the database.");
     }
@@ -345,7 +361,7 @@ export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem>
     delete itemToUpsert.id;
   }
   
-  const { data, error } = await (await supabase)
+  const { data, error } = await supabase
     .from('menu_items')
     .upsert(itemToUpsert)
     .select()
@@ -362,7 +378,7 @@ export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem>
 }
 
 export async function deleteMenuItem(itemId: string) {
-  const { error } = await (await supabase)
+  const { error } = await supabase
     .from('menu_items')
     .delete()
     .eq('id', itemId);
@@ -379,7 +395,7 @@ export async function deleteMenuItem(itemId: string) {
 
 // Server actions for blog posts
 export async function getBlogPosts(): Promise<BlogPost[]> {
-    const { data, error } = await (await supabase)
+    const { data, error } = await supabase
         .from('blogs')
         .select('*')
         .order('created_at', { ascending: false });
@@ -398,7 +414,7 @@ export async function upsertBlogPost(post: Partial<BlogPost>): Promise<BlogPost>
     delete postToUpsert.id;
   }
   
-  const { data, error } = await (await supabase)
+  const { data, error } = await supabase
     .from('blogs')
     .upsert(postToUpsert)
     .select()
@@ -414,7 +430,7 @@ export async function upsertBlogPost(post: Partial<BlogPost>): Promise<BlogPost>
 }
 
 export async function deleteBlogPost(postId: number): Promise<void> {
-  const { error } = await (await supabase)
+  const { error } = await supabase
     .from('blogs')
     .delete()
     .eq('id', postId);

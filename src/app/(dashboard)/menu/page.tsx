@@ -42,15 +42,15 @@ const MenuPage = () => {
 
   useEffect(() => {
     setIsClient(true);
-    // The store fetches on load, but we can re-fetch if needed, e.g., on route change.
-    // fetchMenuItems(); 
+    fetchMenuItems(); 
     if (typeof window !== 'undefined') {
       const url = window.location.origin + '/menu';
       setMenuUrl(url);
     }
-  }, []);
+  }, [fetchMenuItems]);
 
   const formatCategoryTitle = (title: string) => {
+    if (!title) return "Uncategorized";
     return title
         .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
         .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
@@ -60,10 +60,11 @@ const MenuPage = () => {
   const menuCategoriesList = useMemo(() => {
     const categories: { [key: string]: MenuItem[] } = {};
     menuItems.forEach(item => {
-        if (!categories[item.category]) {
-            categories[item.category] = [];
+        const category = item.category || 'Uncategorized';
+        if (!categories[category]) {
+            categories[category] = [];
         }
-        categories[item.category].push(item);
+        categories[category].push(item);
     });
 
     return Object.entries(categories)
@@ -243,7 +244,7 @@ const MenuPage = () => {
                 ))
             ) : (
                 <div className="text-center py-16">
-                    <p className="text-muted-foreground">No dishes found for "{searchTerm}"{selectedCategory !== 'All' ? ` in ${formatCategoryTitle(selectedCategory)}` : ''}. Try another category or search term.</p>
+                    <p className="text-muted-foreground">No dishes found{searchTerm ? ` for "${searchTerm}"`: ''}{selectedCategory !== 'All' ? ` in ${formatCategoryTitle(selectedCategory)}` : ''}. Try another category or search term.</p>
                 </div>
             )}
         </div>

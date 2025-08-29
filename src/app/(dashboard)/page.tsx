@@ -12,22 +12,32 @@ import Link from "next/link";
 import { getDashboardCounts } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 const AdminDashboardPage = () => {
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
-    const [reservationCount, setReservationCount] = useState(0);
-    const [blogCount, setBlogCount] = useState(0);
+    const [counts, setCounts] = useState({
+      reservationsCount: 0,
+      publishedBlogsCount: 0,
+      videosCount: 0,
+    });
+    const [isLoadingCounts, setIsLoadingCounts] = useState(true);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
 
     useEffect(() => {
       setIsClient(true);
       
       const fetchInitialData = async () => {
+        setIsLoadingCounts(true);
         try {
-            const { reservationsCount, publishedBlogsCount } = await getDashboardCounts();
-            setReservationCount(reservationsCount);
-            setBlogCount(publishedBlogsCount);
+            const { reservationsCount, publishedBlogsCount, videosCount } = await getDashboardCounts();
+            setCounts({
+              reservationsCount,
+              publishedBlogsCount,
+              videosCount
+            })
         } catch (error) {
             console.error("Failed to fetch dashboard counts:", error);
             toast({
@@ -35,6 +45,8 @@ const AdminDashboardPage = () => {
                 title: "Error",
                 description: "Could not load dashboard data."
             })
+        } finally {
+          setIsLoadingCounts(false);
         }
       };
       
@@ -45,6 +57,25 @@ const AdminDashboardPage = () => {
     if (!isClient) {
       return null;
     }
+
+    const StatCard = ({ title, value, icon: Icon, description, isLoading }: { title: string, value: string | number, icon: React.ElementType, description: string, isLoading: boolean}) => (
+       <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{title}</CardTitle>
+              <Icon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-1/2" />
+              ) : (
+                <div className="text-2xl font-bold">{value}</div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                  {description}
+              </p>
+          </CardContent>
+      </Card>
+    )
 
     return (
         <div className="flex-col md:flex">
@@ -68,52 +99,34 @@ const AdminDashboardPage = () => {
                     </TabsList>
                     <TabsContent value="overview" className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                             <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Menu Items</CardTitle>
-                                    <Utensils className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">
-                                        {menuLoading ? '...' : menuItems.length}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        items available on the menu
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Reservations</CardTitle>
-                                    <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{reservationCount}</div>
-                                    <p className="text-xs text-muted-foreground">active bookings</p>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Published Blogs</CardTitle>
-                                    <Newspaper className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">+{blogCount}</div>
-                                    <p className="text-xs text-muted-foreground">posts on the blog page</p>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Homepage Videos</CardTitle>
-                                    <Video className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">+0</div>
-                                    <p className="text-xs text-muted-foreground">
-                                        videos featured on the homepage
-                                    </p>
-                                </CardContent>
-                            </Card>
+                            <StatCard 
+                                title="Total Menu Items"
+                                value={menuItems.length}
+                                icon={Utensils}
+                                description="items available on the menu"
+                                isLoading={menuLoading}
+                            />
+                             <StatCard 
+                                title="Total Reservations"
+                                value={counts.reservationsCount}
+                                icon={CalendarCheck}
+                                description="active bookings"
+                                isLoading={isLoadingCounts}
+                            />
+                            <StatCard 
+                                title="Published Blogs"
+                                value={`+${counts.publishedBlogsCount}`}
+                                icon={Newspaper}
+                                description="posts on the blog page"
+                                isLoading={isLoadingCounts}
+                            />
+                             <StatCard 
+                                title="Homepage Videos"
+                                value={`+${counts.videosCount}`}
+                                icon={Video}
+                                description="videos featured on the homepage"
+                                isLoading={isLoadingCounts}
+                            />
                         </div>
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                             <Card className="col-span-4">
