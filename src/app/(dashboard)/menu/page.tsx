@@ -181,7 +181,7 @@ const MenuPage = () => {
                   <DialogDescription>
                     Scan this QR code with your phone's camera to open our interactive online menu.
                   </DialogDescription>
-                </Header>
+                </DialogHeader>
                 <div className="flex justify-center p-4" ref={qrCodeRef}>
                   <QrCode url={menuUrl} />
                 </div>
