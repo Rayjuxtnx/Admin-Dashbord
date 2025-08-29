@@ -1,17 +1,35 @@
-import Image from "next/image"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Upload } from "lucide-react"
+
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getHomepageMedia } from "./actions";
+import MediaUploader from "./MediaUploader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function HomepageMediaPage() {
+  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
+  const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchMedia = async () => {
+    setIsLoading(true);
+    const { heroImageUrl, heroVideoUrl } = await getHomepageMedia();
+    setHeroImageUrl(heroImageUrl);
+    setHeroVideoUrl(heroVideoUrl);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMedia();
+  }, []);
+
+  const handleUploadComplete = (url: string, type: 'image' | 'video') => {
+    // Refetch the media to display the newly uploaded content
+    fetchMedia();
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <header>
@@ -23,60 +41,60 @@ export default function HomepageMediaPage() {
         </p>
       </header>
 
+      <div>
+        <MediaUploader onUploadComplete={handleUploadComplete} purpose="homepage_hero" />
+      </div>
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="font-headline">Hero Image</CardTitle>
-            <CardDescription>Current image displayed on the homepage.</CardDescription>
+            <CardTitle className="font-headline">Current Hero Image</CardTitle>
+            <CardDescription>This is the image currently displayed on the homepage.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="overflow-hidden rounded-lg border">
-              <Image
-                src="https://picsum.photos/1200/800?random=10"
-                alt="Current hero image"
-                width={1200}
-                height={800}
-                className="aspect-[3/2] w-full object-cover"
-                data-ai-hint="restaurant interior"
-              />
-            </div>
-            <div className="grid w-full max-w-sm items-center gap-1.5">
-              <Label htmlFor="image-upload">Upload New Image</Label>
-              <div className="flex gap-2">
-                <Input id="image-upload" type="file" accept="image/*" />
-                <Button>
-                  <Upload className="mr-2 h-4 w-4" /> Upload
-                </Button>
-              </div>
-            </div>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="aspect-[3/2] w-full" />
+            ) : (
+              heroImageUrl && (
+                <div className="overflow-hidden rounded-lg border">
+                  <Image
+                    src={heroImageUrl}
+                    alt="Current hero image"
+                    width={1200}
+                    height={800}
+                    className="aspect-[3/2] w-full object-cover"
+                    unoptimized // Add this if you are using Supabase storage URLs that don't support Next.js image optimization
+                    key={heroImageUrl} // Add key to force re-render
+                  />
+                </div>
+              )
+            )}
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="font-headline">Hero Video</CardTitle>
-            <CardDescription>Current video displayed on the homepage.</CardDescription>
+            <CardTitle className="font-headline">Current Hero Video</CardTitle>
+            <CardDescription>This is the video currently displayed on the homepage.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="overflow-hidden rounded-lg border bg-black">
-                <video
-                    src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
-                    controls
-                    className="aspect-video w-full"
-                />
-            </div>
-             <div className="grid w-full max-w-sm items-center gap-1.5">
-              <Label htmlFor="video-upload">Upload New Video</Label>
-              <div className="flex gap-2">
-                <Input id="video-upload" type="file" accept="video/*" />
-                <Button>
-                  <Upload className="mr-2 h-4 w-4" /> Upload
-                </Button>
-              </div>
-            </div>
+          <CardContent>
+             {isLoading ? (
+              <Skeleton className="aspect-video w-full" />
+            ) : (
+                heroVideoUrl && (
+                    <div className="overflow-hidden rounded-lg border bg-black">
+                        <video
+                            src={heroVideoUrl}
+                            controls
+                            className="aspect-video w-full"
+                            key={heroVideoUrl} // Add key to force re-render
+                        />
+                    </div>
+                )
+            )}
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }
