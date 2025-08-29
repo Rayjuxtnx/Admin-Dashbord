@@ -28,7 +28,9 @@ const MenuManagement = () => {
     const [isChangePictureOpen, setIsChangePictureOpen] = useState(false);
 
     useEffect(() => {
-        fetchMenuItems();
+        // The store now fetches automatically, but we can call it here
+        // if we need to refresh data on component mount.
+        // fetchMenuItems();
     }, [fetchMenuItems]);
 
     const handleEditClick = (item: MenuItem) => {
@@ -159,7 +161,8 @@ const MenuManagement = () => {
                                 <TableHead className="hidden w-[100px] sm:table-cell">Image</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Price</TableHead>
-                                <TableHead className="hidden md:table-cell">Description</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead>Category</TableHead>
                                 <TableHead>
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
@@ -167,7 +170,7 @@ const MenuManagement = () => {
                         </TableHeader>
                         <TableBody>
                             {menuItems.map((item) => (
-                                <TableRow key={`${item.id}-${item.name}`}>
+                                <TableRow key={item.id}>
                                     <TableCell className="hidden sm:table-cell">
                                         <Image
                                             alt={item.name}
@@ -180,7 +183,8 @@ const MenuManagement = () => {
                                     </TableCell>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell>{item.price}</TableCell>
-                                    <TableCell className="hidden md:table-cell max-w-sm truncate">{item.description}</TableCell>
+                                    <TableCell className="hidden md:table-cell max-w-xs truncate">{item.description}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{item.category}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -231,6 +235,10 @@ const MenuManagement = () => {
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="description" className="text-right">Description</Label>
                             <Textarea id="description" value={selectedItem?.description || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, description: e.target.value} : null)} className="col-span-3" />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="category" className="text-right">Category</Label>
+                            <Input id="category" value={selectedItem?.category || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, category: e.target.value} : null)} className="col-span-3" />
                         </div>
                     </div>
                     <DialogFooter>

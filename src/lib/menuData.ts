@@ -1,4 +1,5 @@
 export type MenuItem = {
+    id: string;
     slug: string;
     name: string;
     price: string;
@@ -7,6 +8,7 @@ export type MenuItem = {
     category: keyof MenuData;
 };
 
+// This is now primarily for type-checking the category keys
 export type MenuData = {
     tastyStarters: MenuItem[];
     mombasaStyleChapatis: MenuItem[];
@@ -31,30 +33,4 @@ export type MenuData = {
     milkshakes: MenuItem[];
     healthDrinks: MenuItem[];
     smoothies: MenuItem[];
-};
-
-export const menuData: MenuData = {
-    tastyStarters: [],
-    mombasaStyleChapatis: [],
-    salads: [],
-    breakfast: [],
-    sandwichesAndMore: [],
-    chickenDishes: [],
-    beefAndMuttonDishes: [],
-    mixedGrillPlatters: [],
-    seafoodDishes: [],
-    specialTastyCurries: [],
-    vegetarianDishes: [],
-    kiddyMeals: [],
-    miniLunches: [],
-    soups: [],
-    tastyRiceDishes: [],
-    familyPacksDishes: [],
-    sharwamaSpecial: [],
-    tastySwahiliSideDishes: [],
-    drinks: [],
-    freshJuices: [],
-    milkshakes: [],
-    healthDrinks: [],
-    smoothies: [],
 };

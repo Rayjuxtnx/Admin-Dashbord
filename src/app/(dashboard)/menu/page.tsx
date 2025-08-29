@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useMenuStore } from "@/lib/menuStore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 type MenuCategoryTitle = keyof MenuData;
@@ -33,7 +34,7 @@ type FilterCategory = 'All' | MenuCategoryTitle;
 
 const MenuPage = () => {
   const qrCodeRef = useRef<HTMLDivElement>(null);
-  const { menuItems } = useMenuStore();
+  const { menuItems, isLoading } = useMenuStore();
   const [isClient, setIsClient] = useState(false);
   const [menuUrl, setMenuUrl] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,24 +48,28 @@ const MenuPage = () => {
     }
   }, []);
 
+  const formatCategoryTitle = (title: string) => {
+    return title
+        .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
+        .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+        .trim();
+  }
+
   const menuCategoriesList = useMemo(() => {
-    const categories: { [key in MenuCategoryTitle]: MenuItem[] } = {
-        tastyStarters: [], mombasaStyleChapatis: [], salads: [], breakfast: [],
-        sandwichesAndMore: [], chickenDishes: [], beefAndMuttonDishes: [],
-        mixedGrillPlatters: [], seafoodDishes: [], specialTastyCurries: [],
-        vegetarianDishes: [], kiddyMeals: [], miniLunches: [], soups: [],
-        tastyRiceDishes: [], familyPacksDishes: [], sharwamaSpecial: [],
-        tastySwahiliSideDishes: [], drinks: [], freshJuices: [], milkshakes: [],
-        healthDrinks: [], smoothies: []
-    };
+    if (!menuItems) return [];
+    const categories: { [key: string]: MenuItem[] } = {};
+
     menuItems.forEach(item => {
-        if (categories[item.category]) {
-            categories[item.category].push(item);
+        if (!categories[item.category]) {
+            categories[item.category] = [];
         }
+        categories[item.category].push(item);
     });
+
     return Object.keys(categories)
         .map(key => ({ title: key as MenuCategoryTitle, items: categories[key as MenuCategoryTitle] }))
-        .sort((a,b) => a.title.localeCompare(b.title));
+        .sort((a,b) => formatCategoryTitle(a.title).localeCompare(formatCategoryTitle(b.title)));
+
   }, [menuItems]);
 
   const handleDownload = () => {
@@ -105,29 +110,40 @@ const MenuPage = () => {
     if (lowercasedSearchTerm.trim() !== '') {
       return categories
         .map(category => {
+          if (!category.items) return category;
           const filteredItems = category.items.filter(item =>
             item.name.toLowerCase().includes(lowercasedSearchTerm) ||
-            item.description.toLowerCase().includes(lowercasedSearchTerm)
+            item.description?.toLowerCase().includes(lowercasedSearchTerm)
           );
           return { ...category, items: filteredItems };
         })
-        .filter(category => category.items.length > 0); // Only include categories that have matching items
+        .filter(category => category.items && category.items.length > 0); // Only include categories that have matching items
     }
 
     // Otherwise, return the category-filtered list
-    return categories.filter(category => category.items.length > 0);
+    return categories.filter(category => category.items && category.items.length > 0);
 
   }, [searchTerm, selectedCategory, menuCategoriesList]);
   
-  if (!isClient) {
-    return null; // or a loading spinner
-  }
-
-  const formatCategoryTitle = (title: string) => {
-    return title
-        .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
-        .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
-        .trim();
+  if (!isClient || isLoading) {
+    return (
+       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+         <Skeleton className="h-12 w-1/2 mx-auto" />
+         <Skeleton className="h-8 w-3/4 mx-auto mt-4" />
+         <div className="space-y-12 mt-12">
+            {[...Array(3)].map((_, i) => (
+                <div key={i}>
+                    <Skeleton className="h-10 w-1/3 mx-auto" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-48 w-full" />
+                    </div>
+                </div>
+            ))}
+         </div>
+       </div>
+    )
   }
 
   return (
@@ -188,7 +204,7 @@ const MenuPage = () => {
               <DropdownMenuRadioGroup value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as FilterCategory)}>
                 <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
                 {menuCategoriesList.map(cat => (
-                  <DropdownMenuRadioItem key={cat.title} value={cat.title} className={cn(cat.items.length === 0 && "hidden")}>
+                  <DropdownMenuRadioItem key={cat.title} value={cat.title} className={cn(!cat.items || cat.items.length === 0 && "hidden")}>
                     {formatCategoryTitle(cat.title)}
                   </DropdownMenuRadioItem>
                 ))}
@@ -208,7 +224,7 @@ const MenuPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                             {category.items.map((item) => (
                                 <MenuItemCard
-                                    key={item.name}
+                                    key={item.id}
                                     {...item}
                                 />
                             ))}
@@ -217,7 +233,7 @@ const MenuPage = () => {
                 ))
             ) : (
                 <div className="text-center py-16">
-                    <p className="text-muted-foreground">No dishes found for "{searchTerm}"{selectedCategory !== 'All' ? ` in ${selectedCategory}` : ''}. Try another category or search term.</p>
+                    <p className="text-muted-foreground">No dishes found for "{searchTerm}"{selectedCategory !== 'All' ? ` in ${formatCategoryTitle(selectedCategory)}` : ''}. Try another category or search term.</p>
                 </div>
             )}
         </div>

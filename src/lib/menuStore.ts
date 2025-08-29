@@ -18,11 +18,15 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   isLoading: true,
   error: null,
   fetchMenuItems: async () => {
+    // Prevent refetching if already loading or has data
+    if (get().isLoading || get().menuItems.length > 0) return;
+    
     set({ isLoading: true, error: null });
     try {
       const items = await getMenuItems();
       set({ menuItems: items, isLoading: false });
     } catch (error) {
+      console.error("Failed to fetch menu items:", error);
       set({ error: 'Failed to load menu items.', isLoading: false });
     }
   },
@@ -40,5 +44,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   })),
 }));
 
-// Initialize the store by fetching the menu items
-useMenuStore.getState().fetchMenuItems();
+// Initialize the store by fetching the menu items on app load
+if (typeof window !== 'undefined') {
+    useMenuStore.getState().fetchMenuItems();
+}
