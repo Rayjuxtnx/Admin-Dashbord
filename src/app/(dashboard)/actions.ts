@@ -111,7 +111,7 @@ export async function getGalleryMedia() {
 export async function getRecentPayments() {
   const { data, error } = await supabase
     .from('payments')
-    .select('customer_phone, amount, created_at')
+    .select('phone_number, amount, created_at')
     .order('created_at', { ascending: false })
     .limit(5);
 
@@ -119,7 +119,7 @@ export async function getRecentPayments() {
     console.error("Error fetching recent payments:", error);
     return [];
   }
-  return data.map(p => ({...p, phone_number: p.customer_phone}));
+  return data.map(p => ({...p, phone_number: p.phone_number}));
 }
 
 const parseAmount = (amount: any) => {
@@ -343,3 +343,5 @@ export async function getHomepageMedia() {
         heroVideoUrl: media.hero_video_url || 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
     };
 }
+
+    
