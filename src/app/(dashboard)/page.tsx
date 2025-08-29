@@ -8,7 +8,7 @@ import { RecentPayments } from "./RecentPayments";
 import MediaUploader from "./MediaUploader";
 import MenuManagement from "./MenuManagement";
 import { useMenuStore } from "@/lib/menuStore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import ReservationsList from "./ReservationsList";
