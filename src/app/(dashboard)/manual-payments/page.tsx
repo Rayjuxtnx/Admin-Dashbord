@@ -38,16 +38,16 @@ const statusStyles: { [key: string]: string } = {
 export default function ManualPaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([])
 
-  useEffect(() => {
-    const fetchPayments = async () => {
-      const { data, error } = await supabase.from('payments').select('*')
-      if (error) {
-        console.error('Error fetching payments:', error)
-      } else if (data) {
-        setPayments(data as Payment[])
-      }
+  const fetchPayments = async () => {
+    const { data, error } = await supabase.from('payments').select('*').order('date', { ascending: false });
+    if (error) {
+      console.error('Error fetching payments:', error)
+    } else if (data) {
+      setPayments(data as Payment[])
     }
+  }
 
+  useEffect(() => {
     fetchPayments()
 
     const channel = supabase
@@ -56,17 +56,7 @@ export default function ManualPaymentsPage() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'payments' },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setPayments((prev) => [...prev, payload.new as Payment])
-          }
-          if (payload.eventType === 'UPDATE') {
-            setPayments((prev) => 
-                prev.map(p => p.id === payload.new.id ? payload.new as Payment : p)
-            )
-          }
-          if (payload.eventType === 'DELETE') {
-             setPayments((prev) => prev.filter(p => p.id !== payload.old.id))
-          }
+          fetchPayments();
         }
       )
       .subscribe()
@@ -75,6 +65,20 @@ export default function ManualPaymentsPage() {
       supabase.removeChannel(channel)
     }
   }, [])
+
+  const updatePaymentStatus = async (id: string, status: Payment['status']) => {
+    const { error } = await supabase.from('payments').update({ status }).eq('id', id);
+    if (error) {
+      console.error('Error updating payment status:', error);
+    }
+  }
+
+  const deletePayment = async (id: string) => {
+    const { error } = await supabase.from('payments').delete().eq('id', id);
+     if (error) {
+      console.error('Error deleting payment:', error);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -105,7 +109,7 @@ export default function ManualPaymentsPage() {
                 <TableCell className="font-mono text-sm">{payment.id}</TableCell>
                 <TableCell className="font-medium">{payment.customer}</TableCell>
                 <TableCell>{payment.amount}</TableCell>
-                <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(payment.date).toLocaleString()}</TableCell>
                 <TableCell>
                   <Badge className={cn("capitalize", statusStyles[payment.status])}>{payment.status}</Badge>
                 </TableCell>
@@ -117,10 +121,10 @@ export default function ManualPaymentsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem><CheckCircle className="mr-2 h-4 w-4" />Mark as Verified</DropdownMenuItem>
-                      <DropdownMenuItem><Clock className="mr-2 h-4 w-4" />Mark as Pending</DropdownMenuItem>
-                      <DropdownMenuItem><XCircle className="mr-2 h-4 w-4" />Mark as Invalid</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => updatePaymentStatus(payment.id, 'Verified')}><CheckCircle className="mr-2 h-4 w-4" />Mark as Verified</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => updatePaymentStatus(payment.id, 'Pending')}><Clock className="mr-2 h-4 w-4" />Mark as Pending</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => updatePaymentStatus(payment.id, 'Invalid')}><XCircle className="mr-2 h-4 w-4" />Mark as Invalid</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => deletePayment(payment.id)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

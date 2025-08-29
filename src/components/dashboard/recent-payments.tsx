@@ -16,6 +16,8 @@ type Payment = {
   id: string;
   customer: string;
   amount: string;
+  date: string;
+  status: 'Verified' | 'Pending' | 'Invalid';
 };
 
 export function RecentPayments() {
@@ -25,7 +27,7 @@ export function RecentPayments() {
     const fetchPayments = async () => {
       const { data, error } = await supabase
         .from('payments')
-        .select('id, customer, amount')
+        .select('*')
         .eq('status', 'Verified')
         .order('date', { ascending: false })
         .limit(5);
@@ -56,6 +58,7 @@ export function RecentPayments() {
   }, []);
 
   const getInitials = (name: string) => {
+    if (!name) return "";
     const names = name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
@@ -75,7 +78,7 @@ export function RecentPayments() {
           <p className="text-sm text-muted-foreground text-center py-8">No recent verified payments.</p>
         ) : (
           <div className="space-y-6">
-            {payments.map((payment, index) => (
+            {payments.map((payment) => (
               <div key={payment.id} className="flex items-center">
                 <Avatar className="h-10 w-10">
                   <Image 
