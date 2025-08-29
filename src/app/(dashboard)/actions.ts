@@ -18,8 +18,7 @@ const parseAmount = (amount: string) => {
 export async function getSalesDataForChart() {
     const { data, error } = await supabase
         .from('payments')
-        .select('amount, date, type')
-        .eq('status', 'Verified');
+        .select('amount, date, type');
 
     if (error) {
         console.error("Error fetching sales data:", error);
@@ -37,8 +36,7 @@ export async function getSalesDataForChart() {
 export async function getDashboardCounts() {
     const { count: reservationsCount, error: reservationsError } = await supabase
         .from('reservations')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['Paid', 'Pending']);
+        .select('*', { count: 'exact', head: true });
     
     if (reservationsError) {
         console.error('Error fetching reservations count:', reservationsError);
@@ -46,8 +44,7 @@ export async function getDashboardCounts() {
     
     const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .select('amount')
-        .eq('status', 'Verified');
+        .select('amount');
 
     let totalPayments = "N/A";
     if (!paymentsError) {
@@ -70,7 +67,6 @@ export async function getRecentPayments() {
     const { data, error } = await supabase
       .from('payments')
       .select('amount, created_at, customer_phone')
-      .eq('status', 'Verified')
       .order('created_at', { ascending: false })
       .limit(5);
 
