@@ -5,15 +5,15 @@ import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Utensils, CalendarCheck, Newspaper, Video } from "lucide-react";
 import AdminChart from "./AdminChart";
 import { RecentPayments } from "./RecentPayments";
-import MediaUploader from "./MediaUploader";
 import MenuManagement from "./MenuManagement";
 import { useMenuStore } from "@/lib/menuStore";
-import { useEffect, useState } from "react";
+import { useEffect, useState }from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import ReservationsList from "./ReservationsList";
 import { getReservations } from "./actions";
 import ManualConfirmationsList from "./ManualConfirmationsList";
+import MediaUploader from "./MediaUploader";
 
 const blogPosts = [
   {
@@ -78,11 +78,11 @@ const AdminDashboardPage = () => {
                 <Tabs defaultValue="overview" className="space-y-4">
                     <TabsList>
                         <TabsTrigger value="overview">Overview</TabsTrigger>
-                        <TabsTrigger value="reservations">Reservations</TabsTrigger>
-                        <TabsTrigger value="manual_payments">Manual Payments</TabsTrigger>
-                        <TabsTrigger value="menu">Menu Management</TabsTrigger>
-                        <TabsTrigger value="gallery">Photo Gallery</TabsTrigger>
-                        <TabsTrigger value="uploads">Homepage Media</TabsTrigger>
+                        <TabsTrigger asChild><Link href="/reservations">Reservations</Link></TabsTrigger>
+                        <TabsTrigger asChild><Link href="/manual-payments">Manual Payments</Link></TabsTrigger>
+                        <TabsTrigger asChild><Link href="/admin/menu">Menu Management</Link></TabsTrigger>
+                        <TabsTrigger asChild><Link href="/gallery">Photo Gallery</Link></TabsTrigger>
+                        <TabsTrigger asChild><Link href="/homepage-media">Homepage Media</Link></TabsTrigger>
                         <TabsTrigger asChild>
                            <Link href="/video-gallery">Video Gallery</Link>
                         </TabsTrigger>
@@ -149,21 +149,6 @@ const AdminDashboardPage = () => {
                                 </CardContent>
                             </Card>
                         </div>
-                    </TabsContent>
-                     <TabsContent value="reservations" className="space-y-4">
-                        <ReservationsList />
-                    </TabsContent>
-                    <TabsContent value="manual_payments" className="space-y-4">
-                        <ManualConfirmationsList />
-                    </TabsContent>
-                    <TabsContent value="menu" className="space-y-4">
-                        <MenuManagement />
-                    </TabsContent>
-                    <TabsContent value="gallery" className="space-y-4">
-                        <MediaUploader onUploadComplete={(url, type) => handleUploadComplete(url, type, 'gallery')} purpose="gallery" />
-                    </TabsContent>
-                    <TabsContent value="uploads" className="space-y-4">
-                        <MediaUploader onUploadComplete={(url, type) => handleUploadComplete(url, type, 'homepage_hero')} purpose="homepage_hero" />
                     </TabsContent>
                 </Tabs>
             </div>
