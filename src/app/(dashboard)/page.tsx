@@ -13,30 +13,11 @@ import { getReservations } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
 
-const blogPosts = [
-  {
-    slug: "/blog/secret-nyama-choma"
-  },
-  {
-    slug: "/blog/pilau-vs-biryani"
-  },
-  {
-    slug: "/blog/mall-advantage"
-  }
-];
-
-const signatureDishes = [
-  { name: "Pilau Wednesday Special" },
-  { name: "Chef's Grilled Tilapia" },
-  { name: "Family Feast Platter" },
-];
-
-
 const AdminDashboardPage = () => {
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
     const [reservationCount, setReservationCount] = useState(0);
-    const { menuItems, fetchMenuItems } = useMenuStore();
+    const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
 
     useEffect(() => {
       setIsClient(true);
@@ -45,21 +26,23 @@ const AdminDashboardPage = () => {
         try {
             const reservations = await getReservations();
             setReservationCount(reservations.length);
-            await fetchMenuItems();
         } catch (error) {
-            console.error("Failed to fetch initial data:", error);
+            console.error("Failed to fetch reservations:", error);
             toast({
                 variant: 'destructive',
                 title: "Error",
-                description: "Could not load dashboard data."
+                description: "Could not load reservation data."
             })
         }
       };
       
       fetchInitialData();
-    }, [toast, fetchMenuItems]);
+      // The menu store fetches automatically, so we don't need to call it here again
+      // unless we want to force a refresh on component mount.
+    }, [toast]);
 
     if (!isClient) {
+      // Render a skeleton or null during server-side rendering
       return null;
     }
 
@@ -91,7 +74,7 @@ const AdminDashboardPage = () => {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">
-                                        {menuItems.length}
+                                        {menuLoading ? '...' : menuItems.length}
                                     </div>
                                     <p className="text-xs text-muted-foreground">
                                         items available on the menu
@@ -114,19 +97,19 @@ const AdminDashboardPage = () => {
                                     <Newspaper className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">+{blogPosts.length}</div>
+                                    <div className="text-2xl font-bold">+0</div>
                                     <p className="text-xs text-muted-foreground">posts on the blog page</p>
                                 </CardContent>
                             </Card>
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Homepage Signature Dishes</CardTitle>
-                                    <Star className="h-4 w-4 text-muted-foreground" />
-                                </Header>
+                                    <CardTitle className="text-sm font-medium">Homepage Videos</CardTitle>
+                                    <Video className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{signatureDishes.length}</div>
+                                    <div className="text-2xl font-bold">+0</div>
                                     <p className="text-xs text-muted-foreground">
-                                        dishes featured on the homepage
+                                        videos featured on the homepage
                                     </p>
                                 </CardContent>
                             </Card>
@@ -144,7 +127,7 @@ const AdminDashboardPage = () => {
                                 <CardHeader>
                                     <CardTitle>Recent Payments (STK)</CardTitle>
                                     <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
-                                </Header>
+                                </CardHeader>
                                 <CardContent>
                                     <RecentPayments />
                                 </CardContent>
