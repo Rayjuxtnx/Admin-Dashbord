@@ -12,6 +12,7 @@ import {
   Utensils,
   Video,
   Settings,
+  Newspaper,
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,6 +28,7 @@ const links = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/reservations", label: "Reservations", icon: BookCopy },
   { href: "/manual-payments", label: "Manual Payments", icon: Landmark },
+  { href: "/blogs", label: "Blog", icon: Newspaper },
   { href: "/menu", label: "Public Menu", icon: Utensils },
   { href: "/homepage-media", label: "Homepage Media", icon: ImageIcon },
   { href: "/video-gallery", label: "Video Gallery", icon: Video },

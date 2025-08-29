@@ -9,7 +9,7 @@ import { RecentPayments } from "./RecentPayments";
 import { useEffect, useState }from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { getReservations } from "./actions";
+import { getDashboardCounts } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
 
@@ -17,6 +17,7 @@ const AdminDashboardPage = () => {
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
     const [reservationCount, setReservationCount] = useState(0);
+    const [blogCount, setBlogCount] = useState(0);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
 
     useEffect(() => {
@@ -24,25 +25,24 @@ const AdminDashboardPage = () => {
       
       const fetchInitialData = async () => {
         try {
-            const reservations = await getReservations();
-            setReservationCount(reservations.length);
+            const { reservationsCount, publishedBlogsCount } = await getDashboardCounts();
+            setReservationCount(reservationsCount);
+            setBlogCount(publishedBlogsCount);
         } catch (error) {
-            console.error("Failed to fetch reservations:", error);
+            console.error("Failed to fetch dashboard counts:", error);
             toast({
                 variant: 'destructive',
                 title: "Error",
-                description: "Could not load reservation data."
+                description: "Could not load dashboard data."
             })
         }
       };
       
       fetchInitialData();
-      // The menu store fetches automatically, so we don't need to call it here again
-      // unless we want to force a refresh on component mount.
-    }, [toast]);
+      fetchMenuItems();
+    }, [toast, fetchMenuItems]);
 
     if (!isClient) {
-      // Render a skeleton or null during server-side rendering
       return null;
     }
 
@@ -56,6 +56,7 @@ const AdminDashboardPage = () => {
                     <TabsList>
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="menu-management">Menu Management</TabsTrigger>
+                         <TabsTrigger asChild><Link href="/blogs">Blog</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/reservations">Reservations</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/manual-payments">Manual Payments</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/menu">Public Menu</Link></TabsTrigger>
@@ -97,7 +98,7 @@ const AdminDashboardPage = () => {
                                     <Newspaper className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">+0</div>
+                                    <div className="text-2xl font-bold">+{blogCount}</div>
                                     <p className="text-xs text-muted-foreground">posts on the blog page</p>
                                 </CardContent>
                             </Card>

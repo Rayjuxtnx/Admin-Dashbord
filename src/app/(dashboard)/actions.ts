@@ -5,6 +5,8 @@ import 'dotenv/config';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { revalidatePath } from "next/cache";
 import type { MenuItem } from '@/lib/menuData';
+import type { BlogPost } from '@/lib/blogStore';
+
 
 // Initialize the Supabase client once for all functions in this file
 const supabase = createServiceRoleClient();
@@ -181,9 +183,20 @@ export async function getDashboardCounts() {
         console.error("Error fetching payments:", paymentsError);
     }
 
+    const { count: publishedBlogsCount, error: blogsError } = await (await supabase)
+        .from('blogs')
+        .select('*', { count: 'exact', head: true })
+        .eq('published', true);
+
+    if (blogsError) {
+        console.error('Error fetching blogs count:', blogsError);
+    }
+
+
     return {
         reservationsCount: reservationsCount ?? 0,
         totalPayments,
+        publishedBlogsCount: publishedBlogsCount ?? 0,
     };
 }
 
@@ -358,5 +371,56 @@ export async function deleteMenuItem(itemId: string) {
   
   revalidatePath('/');
   revalidatePath('/menu');
+  return;
+}
+
+// Server actions for blog posts
+export async function getBlogPosts(): Promise<BlogPost[]> {
+    const { data, error } = await (await supabase)
+        .from('blogs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching blog posts:", error);
+        throw new Error("Failed to fetch blog posts.");
+    }
+    return data as BlogPost[];
+};
+
+export async function upsertBlogPost(post: Partial<BlogPost>): Promise<BlogPost> {
+  const postToUpsert = { ...post };
+  
+  if (postToUpsert.id && String(postToUpsert.id).startsWith('new-')) {
+    delete postToUpsert.id;
+  }
+  
+  const { data, error } = await (await supabase)
+    .from('blogs')
+    .upsert(postToUpsert)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error upserting blog post:", error);
+    throw new Error(`Failed to save blog post. Reason: ${error.message}`);
+  }
+
+  revalidatePath('/blogs');
+  return data as BlogPost;
+}
+
+export async function deleteBlogPost(postId: number): Promise<void> {
+  const { error } = await (await supabase)
+    .from('blogs')
+    .delete()
+    .eq('id', postId);
+
+  if (error) {
+    console.error("Error deleting blog post:", error);
+    throw new Error("Failed to delete blog post.");
+  }
+  
+  revalidatePath('/blogs');
   return;
 }
