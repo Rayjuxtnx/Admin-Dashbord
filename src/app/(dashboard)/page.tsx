@@ -1,15 +1,17 @@
 'use client';
 
-import { BookCopy, Newspaper, UtensilsCrossed } from "lucide-react";
+import { BookCopy, UtensilsCrossed } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { OverviewChart } from "@/components/dashboard/overview-chart";
 import { RecentPayments } from "@/components/dashboard/recent-payments";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
+import { Landmark } from "lucide-react";
 
 export default function OverviewPage() {
   const [menuItemsCount, setMenuItemsCount] = useState<number | string>("...");
   const [reservationsCount, setReservationsCount] = useState<number | string>("...");
+  const [totalPayments, setTotalPayments] = useState<number | string>("...");
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -37,6 +39,23 @@ export default function OverviewPage() {
         console.error("Error fetching reservations count:", reservationsError);
         setReservationsCount("N/A");
       }
+      
+      // Fetch total payments
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('amount')
+        .eq('status', 'Verified');
+
+      if (!paymentsError) {
+        const total = paymentsData.reduce((acc, payment) => {
+            const amount = parseFloat(payment.amount.replace(/[^0-9.-]+/g,""));
+            return acc + (isNaN(amount) ? 0 : amount);
+        }, 0);
+        setTotalPayments(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KES' }).format(total));
+      } else {
+        console.error("Error fetching payments:", paymentsError);
+        setTotalPayments("N/A");
+      }
     };
 
     fetchCounts();
@@ -54,10 +73,18 @@ export default function OverviewPage() {
         (payload) => fetchCounts()
       )
       .subscribe();
+      
+    const paymentChanges = supabase
+      .channel('table-db-changes-payments')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, 
+        (payload) => fetchCounts()
+      )
+      .subscribe();
 
     return () => {
         supabase.removeChannel(menuChanges);
         supabase.removeChannel(reservationChanges);
+        supabase.removeChannel(paymentChanges);
     };
   }, []);
 
@@ -75,7 +102,7 @@ export default function OverviewPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard title="Total Menu Items" value={menuItemsCount.toString()} icon={UtensilsCrossed} description="Live count from database" />
         <StatCard title="Active Reservations" value={reservationsCount.toString()} icon={BookCopy} description="Paid & Pending" />
-        <StatCard title="Blog Posts" value="23" icon={Newspaper} description="1 new post" />
+        <StatCard title="Total Verified Revenue" value={totalPayments.toString()} icon={Landmark} description="From all verified payments" />
       </div>
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

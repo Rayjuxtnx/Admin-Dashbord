@@ -12,43 +12,82 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
 } from "@/components/ui/chart";
-
-const chartData = [
-  { month: "March", mpesa: 1860, till: 800 },
-  { month: "April", mpesa: 3050, till: 2000 },
-  { month: "May", mpesa: 2370, till: 1200 },
-  { month: "June", mpesa: 1730, till: 2600 },
-  { month: "July", mpesa: 2090, till: 1400 },
-  { month: "August", mpesa: 2140, till: 2900 },
-];
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { subDays, format } from "date-fns";
 
 const chartConfig = {
-  mpesa: {
-    label: "M-Pesa STK",
+  payments: {
+    label: "Payments",
     color: "hsl(var(--primary))",
-  },
-  till: {
-    label: "Till",
-    color: "hsl(var(--accent))",
   },
 };
 
+type ChartData = {
+  date: string;
+  payments: number;
+}
+
 export function OverviewChart() {
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+
+  useEffect(() => {
+    const fetchSalesData = async () => {
+      const today = new Date();
+      const last7Days = Array.from({ length: 7 }, (_, i) => subDays(today, i));
+      
+      const { data, error } = await supabase
+        .from('payments')
+        .select('date, amount')
+        .eq('status', 'Verified')
+        .gte('date', format(subDays(today, 6), 'yyyy-MM-dd'));
+
+      if (error) {
+        console.error("Error fetching sales data:", error);
+        return;
+      }
+      
+      const dailyTotals = last7Days.map(date => {
+        const formattedDate = format(date, 'MMM d');
+        const total = data
+          .filter(p => format(new Date(p.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
+          .reduce((sum, p) => sum + parseFloat(p.amount.replace(/[^0-9.-]+/g,"") || '0'), 0);
+        return { date: formattedDate, payments: total };
+      }).reverse();
+
+      setChartData(dailyTotals);
+    };
+
+    fetchSalesData();
+    
+    const channel = supabase
+      .channel('realtime overview-chart')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payments' },
+        () => fetchSalesData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+
+  }, []);
+
   return (
     <Card className="shadow-sm">
       <CardHeader>
         <CardTitle className="font-headline">Sales Overview</CardTitle>
-        <CardDescription>Online vs. Manual Payments - Last 6 months</CardDescription>
+        <CardDescription>Verified payments over the last 7 days.</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
           <BarChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="month"
+              dataKey="date"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
@@ -59,9 +98,7 @@ export function OverviewChart() {
                 tickFormatter={(value) => `KES ${Number(value) / 1000}k`}
             />
             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-            <ChartLegend content={<ChartLegendContent />} />
-            <Bar dataKey="mpesa" fill="var(--color-mpesa)" radius={4} />
-            <Bar dataKey="till" fill="var(--color-till)" radius={4} />
+            <Bar dataKey="payments" fill="var(--color-payments)" radius={4} />
           </BarChart>
         </ChartContainer>
       </CardContent>

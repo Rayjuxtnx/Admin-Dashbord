@@ -47,7 +47,7 @@ export function RecentPayments() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'payments' },
         (payload) => {
-          fetchPayments(); // Refetch on any change
+          fetchPayments();
         }
       )
       .subscribe();
@@ -81,19 +81,11 @@ export function RecentPayments() {
             {payments.map((payment) => (
               <div key={payment.id} className="flex items-center">
                 <Avatar className="h-10 w-10">
-                  <Image 
-                    src={`https://i.pravatar.cc/40?u=${payment.customer}`}
-                    alt={payment.customer} 
-                    width={40} 
-                    height={40} 
-                    className="rounded-full" 
-                    data-ai-hint="person portrait"
-                  />
                   <AvatarFallback>{getInitials(payment.customer)}</AvatarFallback>
                 </Avatar>
                 <div className="ml-4 flex-1 space-y-1">
                   <p className="text-sm font-medium leading-none">{payment.customer}</p>
-                  <p className="text-sm text-muted-foreground">Verified Payment</p>
+                  <p className="text-sm text-muted-foreground">Verified on {new Date(payment.date).toLocaleDateString()}</p>
                 </div>
                 <div className="ml-auto font-medium">{payment.amount}</div>
               </div>
