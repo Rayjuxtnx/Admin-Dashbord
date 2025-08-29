@@ -35,7 +35,7 @@ export function RecentPayments() {
       if (error) {
         console.error("Error fetching recent payments:", error);
       } else {
-        setPayments(data as Payment[]);
+        setPayments(data || []);
       }
     };
 
