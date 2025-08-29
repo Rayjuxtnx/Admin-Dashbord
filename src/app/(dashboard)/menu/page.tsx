@@ -1,278 +1,229 @@
-
 "use client";
 
-import { MenuItem, menuData } from "@/lib/menuData";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Image as ImageIcon, PlusCircle } from "lucide-react";
-import Image from "next/image";
-import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Download, QrCode as QrCodeIcon, ChevronsUpDown } from "lucide-react";
+import MenuItemCard from "@/components/MenuItemCard";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import QrCode from "@/components/QrCode";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import MediaUploader from "./MediaUploader";
+import { MenuItem } from "@/lib/menuData";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useMenuStore } from "@/lib/menuStore";
 
-const MenuManagement = () => {
-    const { toast } = useToast();
-    const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, setMenuItems } = useMenuStore();
-    const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-    const [newItem, setNewItem] = useState<Omit<MenuItem, 'slug'>>({ name: '', price: '', description: '', image: 'https://picsum.photos/600/400', dataAiHint: '' });
-    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isChangePictureOpen, setIsChangePictureOpen] = useState(false);
 
-    // This effect handles hydration mismatch between server and client
-    const [hydratedMenuItems, setHydratedMenuItems] = useState<MenuItem[]>([]);
-    useEffect(() => {
-        setMenuItems(menuData);
-    }, [setMenuItems]);
+type MenuCategoryTitle = 'Tasty Starters' | 'Mombasa Style Chapatis' | 'Salads' | 'Breakfast' | 'Sandwiches/Burgers/Steaks' | 'Chicken Dishes' | 'BEEF /MUTTON DISHES' | 'MIXED GRILL PLATTERS' | 'SEAFOOD DISHES' | 'Special Tasty Curries' | 'Vegetarian Dishes' | 'Kiddy Meals' | 'Mini - Lunches' | 'Soups' | 'Tasty Rice Dishes' | 'FAMILY PACKS DISHES' | 'SHARWAMA SPECIAL' | 'TASTY SWAHILI SIDE DISHES' | 'Drinks' | 'Fresh Juices' | 'Milkshakes' | 'Health Drinks' | 'Smoothies';
+type FilterCategory = 'All' | MenuCategoryTitle;
 
-    useEffect(() => {
-        setHydratedMenuItems(menuItems);
-    }, [menuItems]);
+const MenuPage = () => {
+  const qrCodeRef = useRef<HTMLDivElement>(null);
+  const { menuData } = useMenuStore();
+  const [isClient, setIsClient] = useState(false);
+  const [menuUrl, setMenuUrl] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('All');
+  
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const url = window.location.origin + '/menu';
+      setMenuUrl(url);
+    }
+  }, []);
 
+  const menuCategoriesList: { title: MenuCategoryTitle, items: MenuItem[] }[] = useMemo(() => [
+      { title: "Breakfast", items: menuData.breakfast },
+      { title: "Soups", items: menuData.soups },
+      { title: "Tasty Starters", items: menuData.tastyStarters },
+      { title: "Salads", items: menuData.salads },
+      { title: "SHARWAMA SPECIAL", items: menuData.sharwamaSpecial },
+      { title: "Mombasa Style Chapatis", items: menuData.mombasaStyleChapatis },
+      { title: "Special Tasty Curries", items: menuData.specialTastyCurries },
+      { title: "Vegetarian Dishes", items: menuData.vegetarianDishes },
+      { title: "Chicken Dishes", items: menuData.chickenDishes },
+      { title: "BEEF /MUTTON DISHES", items: menuData.beefAndMuttonDishes },
+      { title: "SEAFOOD DISHES", items: menuData.seafoodDishes },
+      { title: "MIXED GRILL PLATTERS", items: menuData.mixedGrillPlatters },
+      { title: "FAMILY PACKS DISHES", items: menuData.familyPacksDishes },
+      { title: "Sandwiches/Burgers/Steaks", items: menuData.sandwichesAndMore },
+      { title: "Tasty Rice Dishes", items: menuData.tastyRiceDishes },
+      { title: "TASTY SWAHILI SIDE DISHES", items: menuData.tastySwahiliSideDishes },
+      { title: "Kiddy Meals", items: menuData.kiddyMeals },
+      { title: "Mini - Lunches", items: menuData.miniLunches },
+      { title: "Drinks", items: menuData.drinks },
+      { title: "Fresh Juices", items: menuData.freshJuices },
+      { title: "Health Drinks", items: menuData.healthDrinks },
+      { title: "Smoothies", items: menuData.smoothies },
+      { title: "Milkshakes", items: menuData.milkshakes },
+  ], [menuData]);
 
-    const handleEditClick = (item: MenuItem) => {
-        setSelectedItem({...item});
-        setIsEditDialogOpen(true);
-    };
-
-    const handleDeleteClick = (item: MenuItem) => {
-        setSelectedItem(item);
-        setIsDeleteDialogOpen(true);
-    };
+  const handleDownload = () => {
+    const svgElement = qrCodeRef.current?.querySelector('svg');
+    if (svgElement) {
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const canvas = document.createElement("canvas");
+      const svgSize = svgElement.getBoundingClientRect();
+      canvas.width = svgSize.width;
+      canvas.height = svgSize.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const img = document.createElement("img");
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        const pngFile = canvas.toDataURL("image/png");
+        const downloadLink = document.createElement("a");
+        downloadLink.download = "hiddentastygrill-menu-qr-code.png";
+        downloadLink.href = pngFile;
+        downloadLink.click();
+      };
+      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    }
+  };
+  
+  const filteredMenuCategories = useMemo(() => {
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
     
-    const handleChangePictureClick = (item: MenuItem) => {
-        setSelectedItem(item);
-        setIsChangePictureOpen(true);
+    // Start with all categories
+    let categories = menuCategoriesList;
+
+    // Filter by selected category
+    if (selectedCategory !== 'All') {
+      categories = categories.filter(cat => cat.title === selectedCategory);
     }
 
-    const handleSaveChanges = () => {
-        if (!selectedItem) return;
-        
-        updateMenuItem(selectedItem);
-        
-        toast({
-            title: "Item Updated",
-            description: `${selectedItem.name} has been successfully updated.`,
-        });
-        setIsEditDialogOpen(false);
-        setSelectedItem(null);
-    };
-
-    const handleDeleteConfirm = () => {
-        if (!selectedItem) return;
-
-        deleteMenuItem(selectedItem.slug);
-        
-        toast({
-            title: "Item Deleted",
-            description: `${selectedItem.name} has been removed from the menu.`,
-        });
-        setIsDeleteDialogOpen(false);
-        setSelectedItem(null);
-    };
-    
-    const handleAddNewItem = () => {
-        addMenuItem(newItem);
-        toast({
-            title: "Item Added",
-            description: `${newItem.name} has been successfully added to the menu.`,
-        });
-        setIsAddDialogOpen(false);
-        setNewItem({ name: '', price: '', description: '', image: 'https://picsum.photos/600/400', dataAiHint: '' });
+    // If there's a search term, filter items within each category
+    if (lowercasedSearchTerm.trim() !== '') {
+      return categories
+        .map(category => {
+          const filteredItems = category.items.filter(item =>
+            item.name.toLowerCase().includes(lowercasedSearchTerm) ||
+            item.description.toLowerCase().includes(lowercasedSearchTerm)
+          );
+          return { ...category, items: filteredItems };
+        })
+        .filter(category => category.items.length > 0); // Only include categories that have matching items
     }
 
-    const handleImageUpload = (newImageUrl: string) => {
-        if (!selectedItem) return;
+    // Otherwise, return the category-filtered list
+    return categories.filter(category => category.items.length > 0);
 
-        const updatedItem = { ...selectedItem, image: newImageUrl };
-        updateMenuItem(updatedItem);
+  }, [searchTerm, selectedCategory, menuCategoriesList]);
+  
+  if (!isClient) {
+    return null; // or a loading spinner
+  }
 
-        toast({
-            title: "Image Updated",
-            description: `The image for ${selectedItem.name} has been successfully changed.`,
-        });
-        
-        setIsChangePictureOpen(false);
-        setSelectedItem(null);
-    }
 
-    return (
-        <>
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold font-headline tracking-tight">
-                    Menu Management
-                    </h1>
-                    <p className="text-muted-foreground">
-                    Add, edit, or delete items from your restaurant's menu.
-                    </p>
-                </div>
-                <Button onClick={() => setIsAddDialogOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
+  return (
+    <div className="bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+        <div className="text-center">
+          <h1 className="font-headline text-4xl md:text-5xl font-bold">Our Menu</h1>
+          <p className="mt-4 text-lg text-muted-foreground max-w-3xl mx-auto">
+            A culinary journey through Kenya's finest flavors and international favorites.
+            All prices are inclusive of VAT.
+          </p>
+        </div>
+
+        <div className="flex justify-center mt-8 gap-4">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <QrCodeIcon className="mr-2 h-4 w-4" />
+                  Show QR Code
                 </Button>
-            </div>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Menu Items</CardTitle>
-                    <CardDescription>Manage your restaurant's menu. You can edit, delete, or change images for any item.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="hidden w-[100px] sm:table-cell">Image</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead className="hidden md:table-cell">Description</TableHead>
-                                <TableHead>
-                                    <span className="sr-only">Actions</span>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {hydratedMenuItems.map((item) => (
-                                <TableRow key={`${item.slug}-${item.name}`}>
-                                    <TableCell className="hidden sm:table-cell">
-                                        <Image
-                                            alt={item.name}
-                                            className="aspect-square rounded-md object-cover"
-                                            height="64"
-                                            src={item.image}
-                                            width="64"
-                                            data-ai-hint={item.dataAiHint}
-                                        />
-                                    </TableCell>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell>{item.price}</TableCell>
-                                    <TableCell className="hidden md:table-cell max-w-sm truncate">{item.description}</TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">Toggle menu</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onSelect={() => handleEditClick(item)}>
-                                                    <Pencil className="mr-2 h-4 w-4" /> Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleChangePictureClick(item)}>
-                                                    <ImageIcon className="mr-2 h-4 w-4" /> Change Picture
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleDeleteClick(item)} className="text-destructive focus:text-destructive">
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Scan to View Menu</DialogTitle>
+                  <DialogDescription>
+                    Scan this QR code with your phone's camera to open our interactive online menu.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-center p-4" ref={qrCodeRef}>
+                  <QrCode url={menuUrl} />
+                </div>
+                <Button onClick={handleDownload}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download for Printing
+                </Button>
+              </DialogContent>
+            </Dialog>
+        </div>
+
+        <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+          <Input
+            type="text"
+            placeholder="Search our delicious dishes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full text-center md:text-left"
+          />
+           <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span>{selectedCategory === 'All' ? 'Filter by Category' : selectedCategory}</span>
+                <ChevronsUpDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-96 overflow-y-auto">
+              <DropdownMenuLabel>Select a Category</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as FilterCategory)}>
+                <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
+                {menuCategoriesList.map(cat => (
+                  <DropdownMenuRadioItem key={cat.title} value={cat.title} className={cn(cat.items.length === 0 && "hidden")}>
+                    {cat.title}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+
+        <div className="space-y-12 mt-8">
+            {filteredMenuCategories.length > 0 ? (
+                filteredMenuCategories.map(category => (
+                    <div key={category.title}>
+                        <h2 className="font-headline text-3xl md:text-4xl font-bold text-primary border-b pb-2 text-center">
+                            {category.title}
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+                            {category.items.map((item) => (
+                                <MenuItemCard
+                                    key={item.name}
+                                    {...item}
+                                />
                             ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            
-            {/* Add Item Dialog */}
-             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Add New Menu Item</DialogTitle>
-                        <DialogDescription>Fill out the details for the new menu item.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="new-name" className="text-right">Name</Label>
-                            <Input id="new-name" value={newItem.name} onChange={(e) => setNewItem(prev => ({...prev, name: e.target.value}))} className="col-span-3" />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="new-price" className="text-right">Price</Label>
-                            <Input id="new-price" value={newItem.price} onChange={(e) => setNewItem(prev => ({...prev, price: e.target.value}))} className="col-span-3" />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="new-description" className="text-right">Description</Label>
-                            <Textarea id="new-description" value={newItem.description} onChange={(e) => setNewItem(prev => ({...prev, description: e.target.value}))} className="col-span-3" />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button onClick={handleAddNewItem}>Add Item</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Item Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edit: {selectedItem?.name}</DialogTitle>
-                        <DialogDescription>Make changes to this menu item. Click save when you're done.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">Name</Label>
-                            <Input id="name" value={selectedItem?.name || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, name: e.target.value} : null)} className="col-span-3" />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="price" className="text-right">Price</Label>
-                            <Input id="price" value={selectedItem?.price || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, price: e.target.value} : null)} className="col-span-3" />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="description" className="text-right">Description</Label>
-                            <Textarea id="description" value={selectedItem?.description || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, description: e.target.value} : null)} className="col-span-3" />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button onClick={handleSaveChanges}>Save Changes</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Are you sure you want to delete this item?</DialogTitle>
-                        <DialogDescription>
-                           This action cannot be undone. This will permanently delete the item: <span className="font-semibold text-foreground">{selectedItem?.name}</span>.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button variant="destructive" onClick={handleDeleteConfirm}>Yes, Delete Item</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-            
-            {/* Change Picture Dialog */}
-            <Dialog open={isChangePictureOpen} onOpenChange={setIsChangePictureOpen}>
-                <DialogContent className="max-w-4xl">
-                     <DialogHeader>
-                        <DialogTitle>Change Picture for: {selectedItem?.name}</DialogTitle>
-                        <DialogDescription>
-                           Upload a new image or video for this menu item.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <MediaUploader onImageUpload={handleImageUpload} />
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-        </>
-    );
+                ))
+            ) : (
+                <div className="text-center py-16">
+                    <p className="text-muted-foreground">No dishes found for "{searchTerm}"{selectedCategory !== 'All' ? ` in ${selectedCategory}` : ''}. Try another category or search term.</p>
+                </div>
+            )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
-export default MenuManagement;
+export default MenuPage;

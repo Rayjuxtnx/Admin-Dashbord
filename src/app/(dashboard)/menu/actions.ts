@@ -10,11 +10,13 @@ const supabase = createClient(
 )
 
 export async function getMenuItems() {
+    // This function will need to be updated to fetch categorized menu data
     const { data, error } = await supabase.from('menu_items').select('*');
     if (error) {
         console.error("Error fetching menu items:", error);
-        return []
+        return {}
     }
+    // This needs to be processed into the categorized format
     return data;
 };
 
