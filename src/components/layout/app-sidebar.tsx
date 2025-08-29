@@ -36,7 +36,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-2 p-2" passHref>
+        <Link href="/" className="flex items-center gap-2 p-2">
           <div className="rounded-lg bg-primary p-2 text-primary-foreground">
             <LayoutGrid className="h-6 w-6" />
           </div>
