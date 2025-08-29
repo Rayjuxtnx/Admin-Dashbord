@@ -4,6 +4,7 @@
 import 'dotenv/config';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { revalidatePath } from "next/cache";
+import type { MenuItem } from '@/lib/menuData';
 
 // Initialize the Supabase client once for all functions in this file
 const supabase = createServiceRoleClient();
@@ -302,21 +303,60 @@ export async function getHomepageMedia() {
     };
 }
 
-// These functions are placeholders since the menu is not in the database.
-// In a real application, these would interact with your database.
-export async function upsertMenuItem(item: any) {
-  console.log("Simulating upsert for:", item);
-  // In a real app, you would do:
-  // const { data, error } = await supabase.from('menu_items').upsert(item).select().single();
-  // if (error) throw error;
-  // return data;
-  return item;
+
+// Server actions for menu items
+export async function getMenuItems(): Promise<MenuItem[]> {
+    const { data, error } = await (await supabase)
+        .from('menu_items')
+        .select('*')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching menu items:", error);
+        throw new Error("Failed to fetch menu items.");
+    }
+    return data as MenuItem[];
+};
+
+export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem> {
+  const itemToUpsert = {
+    ...item,
+    slug: item.name?.toLowerCase().replace(/\s+/g, '-') || `item-${Date.now()}`
+  };
+  
+  // If 'id' is present and it's a new temporary id, remove it before insertion
+  if (itemToUpsert.id && String(itemToUpsert.id).startsWith('new-')) {
+    delete itemToUpsert.id;
+  }
+  
+  const { data, error } = await (await supabase)
+    .from('menu_items')
+    .upsert(itemToUpsert)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error upserting menu item:", error);
+    throw new Error(`Failed to save menu item. Reason: ${error.message}`);
+  }
+
+  revalidatePath('/');
+  revalidatePath('/menu');
+  return data as MenuItem;
 }
 
 export async function deleteMenuItem(itemId: string) {
-  console.log("Simulating delete for item ID:", itemId);
-  // In a real app, you would do:
-  // const { error } = await supabase.from('menu_items').delete().eq('id', itemId);
-  // if (error) throw error;
+  const { error } = await (await supabase)
+    .from('menu_items')
+    .delete()
+    .eq('id', itemId);
+
+  if (error) {
+    console.error("Error deleting menu item:", error);
+    throw new Error("Failed to delete menu item.");
+  }
+  
+  revalidatePath('/');
+  revalidatePath('/menu');
   return;
 }

@@ -10,7 +10,8 @@ import { useEffect, useState }from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { getReservations } from "./actions";
-import { getTotalMenuItems } from "@/lib/menuData";
+import { useMenuStore } from "@/lib/menuStore";
+import MenuManagement from "./MenuManagement";
 
 const blogPosts = [
   {
@@ -35,7 +36,7 @@ const AdminDashboardPage = () => {
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
     const [reservationCount, setReservationCount] = useState(0);
-    const [totalMenuItems, setTotalMenuItems] = useState(0);
+    const { menuItems, fetchMenuItems } = useMenuStore();
 
     useEffect(() => {
       setIsClient(true);
@@ -44,7 +45,7 @@ const AdminDashboardPage = () => {
         try {
             const reservations = await getReservations();
             setReservationCount(reservations.length);
-            setTotalMenuItems(getTotalMenuItems());
+            await fetchMenuItems();
         } catch (error) {
             console.error("Failed to fetch initial data:", error);
             toast({
@@ -56,7 +57,7 @@ const AdminDashboardPage = () => {
       };
       
       fetchInitialData();
-    }, [toast]);
+    }, [toast, fetchMenuItems]);
 
     if (!isClient) {
       return null;
@@ -71,6 +72,7 @@ const AdminDashboardPage = () => {
                 <Tabs defaultValue="overview" className="space-y-4">
                     <TabsList>
                         <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="menu-management">Menu Management</TabsTrigger>
                         <TabsTrigger asChild><Link href="/reservations">Reservations</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/manual-payments">Manual Payments</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/menu">Public Menu</Link></TabsTrigger>
@@ -89,7 +91,7 @@ const AdminDashboardPage = () => {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">
-                                        {totalMenuItems}
+                                        {menuItems.length}
                                     </div>
                                     <p className="text-xs text-muted-foreground">
                                         items available on the menu
@@ -148,6 +150,9 @@ const AdminDashboardPage = () => {
                                 </CardContent>
                             </Card>
                         </div>
+                    </TabsContent>
+                     <TabsContent value="menu-management" className="space-y-4">
+                        <MenuManagement />
                     </TabsContent>
                 </Tabs>
             </div>

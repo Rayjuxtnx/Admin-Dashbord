@@ -15,7 +15,7 @@ import {
 import QrCode from "@/components/QrCode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { MenuItem, menuData } from "@/lib/menuData";
+import { MenuItem } from "@/lib/menuData";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMenuStore } from "@/lib/menuStore";
 
 
 type FilterCategory = 'All' | string;
@@ -37,9 +38,12 @@ const MenuPage = () => {
   const [menuUrl, setMenuUrl] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('All');
-  
+  const { menuItems, isLoading, error, fetchMenuItems } = useMenuStore();
+
   useEffect(() => {
     setIsClient(true);
+    // The store fetches on load, but we can re-fetch if needed, e.g., on route change.
+    // fetchMenuItems(); 
     if (typeof window !== 'undefined') {
       const url = window.location.origin + '/menu';
       setMenuUrl(url);
@@ -52,10 +56,21 @@ const MenuPage = () => {
         .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
         .trim();
   }
-
+  
   const menuCategoriesList = useMemo(() => {
-     return menuData.sort((a,b) => a.title.localeCompare(b.title));
-  }, []);
+    const categories: { [key: string]: MenuItem[] } = {};
+    menuItems.forEach(item => {
+        if (!categories[item.category]) {
+            categories[item.category] = [];
+        }
+        categories[item.category].push(item);
+    });
+
+    return Object.entries(categories)
+        .map(([title, items]) => ({ title, items }))
+        .sort((a, b) => a.title.localeCompare(b.title));
+  }, [menuItems]);
+
 
   const handleDownload = () => {
     const svgElement = qrCodeRef.current?.querySelector('svg');
@@ -98,7 +113,7 @@ const MenuPage = () => {
           if (!category.items) return { ...category, items: [] };
           const filteredItems = category.items.filter(item =>
             item.name.toLowerCase().includes(lowercasedSearchTerm) ||
-            item.description?.toLowerCase().includes(lowercasedSearchTerm)
+            (item.description && item.description.toLowerCase().includes(lowercasedSearchTerm))
           );
           return { ...category, items: filteredItems };
         })
@@ -110,7 +125,7 @@ const MenuPage = () => {
 
   }, [searchTerm, selectedCategory, menuCategoriesList]);
   
-  if (!isClient) {
+  if (isLoading || !isClient) {
     return (
        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
          <Skeleton className="h-12 w-1/2 mx-auto" />
@@ -128,6 +143,16 @@ const MenuPage = () => {
             ))}
          </div>
        </div>
+    )
+  }
+
+  if (error) {
+    return (
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center">
+            <h2 className="text-2xl font-bold text-destructive">Failed to load menu</h2>
+            <p className="text-muted-foreground mt-2">{error}</p>
+            <Button onClick={() => fetchMenuItems()} className="mt-4">Try Again</Button>
+        </div>
     )
   }
 

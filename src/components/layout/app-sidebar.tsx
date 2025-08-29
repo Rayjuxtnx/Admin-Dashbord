@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Utensils,
   Video,
+  Settings,
 } from "lucide-react";
 import {
   Sidebar,
@@ -53,7 +54,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={link.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === link.href || (link.href === '/' && pathname === '/')}
+                isActive={pathname === link.href}
                 tooltip={link.label}
               >
                 <Link href={link.href}>

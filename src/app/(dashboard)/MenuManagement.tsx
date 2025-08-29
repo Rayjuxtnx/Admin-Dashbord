@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import MediaUploader from "./MediaUploader";
 import { useMenuStore } from "@/lib/menuStore";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -22,15 +21,14 @@ const MenuManagement = () => {
     const { toast } = useToast();
     const { menuItems, isLoading, error, fetchMenuItems, addMenuItem, updateMenuItem, removeMenuItem } = useMenuStore();
     
-    const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<Partial<MenuItem> | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isChangePictureOpen, setIsChangePictureOpen] = useState(false);
 
     useEffect(() => {
         // The store fetches automatically, but we can re-fetch if needed.
-        // fetchMenuItems();
-    }, []);
+        fetchMenuItems();
+    }, [fetchMenuItems]);
 
     const handleEditClick = (item: MenuItem) => {
         setSelectedItem({...item});
@@ -41,11 +39,6 @@ const MenuManagement = () => {
         setSelectedItem(item);
         setIsDeleteDialogOpen(true);
     };
-    
-    const handleChangePictureClick = (item: MenuItem) => {
-        setSelectedItem(item);
-        setIsChangePictureOpen(true);
-    }
     
     const handleAddClick = () => {
         setSelectedItem({
@@ -62,51 +55,46 @@ const MenuManagement = () => {
 
     const handleSaveChanges = async () => {
         if (!selectedItem) return;
-        
-        // Since we are not using a database, we'll just update the state in the store
-        if (menuItems.some(item => item.id === selectedItem.id)) { // Existing item
-            updateMenuItem(selectedItem);
-             toast({
-                title: "Item Updated (Simulated)",
-                description: `${selectedItem.name} has been updated in the local state.`,
+
+        const action = selectedItem.id && menuItems.some(item => item.id === selectedItem.id) ? 'update' : 'add';
+        const promise = action === 'update' ? updateMenuItem(selectedItem as MenuItem) : addMenuItem(selectedItem as Omit<MenuItem, 'id' | 'slug'>);
+
+        try {
+            await promise;
+            toast({
+                title: `Item ${action === 'update' ? 'Updated' : 'Added'}`,
+                description: `${selectedItem.name} has been successfully saved.`,
             });
-        } else { // New item
-            addMenuItem(selectedItem);
-             toast({
-                title: "Item Added (Simulated)",
-                description: `${selectedItem.name} has been added to the local state.`,
+            setIsEditDialogOpen(false);
+            setSelectedItem(null);
+        } catch (e: any) {
+            toast({
+                variant: 'destructive',
+                title: `Failed to ${action} item`,
+                description: e.message || 'An error occurred.',
             });
         }
-        
-        setIsEditDialogOpen(false);
-        setSelectedItem(null);
     };
 
     const handleDeleteConfirm = async () => {
-        if (!selectedItem) return;
+        if (!selectedItem || !selectedItem.id) return;
 
-        removeMenuItem(selectedItem.id);
-        toast({
-            title: "Item Deleted (Simulated)",
-            description: `${selectedItem.name} has been removed from the local state.`,
-        });
-        setIsDeleteDialogOpen(false);
-        setSelectedItem(null);
+        try {
+            await removeMenuItem(selectedItem.id);
+            toast({
+                title: "Item Deleted",
+                description: `${selectedItem.name} has been removed from the menu.`,
+            });
+            setIsDeleteDialogOpen(false);
+            setSelectedItem(null);
+        } catch (e: any) {
+             toast({
+                variant: 'destructive',
+                title: "Failed to delete item",
+                description: e.message || 'An error occurred.',
+            });
+        }
     };
-
-    const handleImageUpload = (newImageUrl: string) => {
-        if (!selectedItem) return;
-
-        const updatedItem = { ...selectedItem, image: newImageUrl };
-        setSelectedItem(updatedItem);
-        updateMenuItem(updatedItem);
-        toast({
-            title: "Image Updated (Simulated)",
-            description: `The image for ${selectedItem.name} has been changed.`,
-        });
-        setIsChangePictureOpen(false);
-        setSelectedItem(null);
-    }
 
     return (
         <>
@@ -114,7 +102,7 @@ const MenuManagement = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Menu Items</CardTitle>
-                        <CardDescription>Manage your restaurant's menu. Changes are simulated and will reset on page refresh.</CardDescription>
+                        <CardDescription>Manage your restaurant's menu. Changes will be saved to the database.</CardDescription>
                     </div>
                      <Button onClick={handleAddClick}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -152,7 +140,7 @@ const MenuManagement = () => {
                                             alt={item.name}
                                             className="aspect-square rounded-md object-cover"
                                             height="64"
-                                            src={item.image}
+                                            src={item.image || 'https://picsum.photos/64'}
                                             width="64"
                                             unoptimized
                                         />
@@ -175,9 +163,6 @@ const MenuManagement = () => {
                                                 <DropdownMenuItem onSelect={() => handleEditClick(item)}>
                                                     <Pencil className="mr-2 h-4 w-4" /> Edit
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleChangePictureClick(item)}>
-                                                    <ImageIcon className="mr-2 h-4 w-4" /> Change Picture
-                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onSelect={() => handleDeleteClick(item)} className="text-destructive focus:text-destructive">
                                                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                                                 </DropdownMenuItem>
@@ -196,7 +181,7 @@ const MenuManagement = () => {
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{selectedItem?.id.startsWith('new-') ? 'Add' : 'Edit'}: {selectedItem?.name || 'New Item'}</DialogTitle>
+                        <DialogTitle>{selectedItem?.id?.toString().startsWith('new-') ? 'Add' : 'Edit'}: {selectedItem?.name || 'New Item'}</DialogTitle>
                         <DialogDescription>Make changes to this menu item. Click save when you're done.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -216,6 +201,10 @@ const MenuManagement = () => {
                             <Label htmlFor="category" className="text-right">Category</Label>
                             <Input id="category" value={selectedItem?.category || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, category: e.target.value} : null)} className="col-span-3" />
                         </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="image" className="text-right">Image URL</Label>
+                            <Input id="image" value={selectedItem?.image || ''} onChange={(e) => setSelectedItem(prev => prev ? {...prev, image: e.target.value} : null)} className="col-span-3" />
+                        </div>
                     </div>
                     <DialogFooter>
                         <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
@@ -230,7 +219,7 @@ const MenuManagement = () => {
                     <DialogHeader>
                         <DialogTitle>Are you sure you want to delete this item?</DialogTitle>
                         <DialogDescription>
-                           This action cannot be undone. This will permanently delete the item: <span className="font-semibold text-foreground">{selectedItem?.name}</span>.
+                           This action cannot be undone. This will permanently delete the item from the database: <span className="font-semibold text-foreground">{selectedItem?.name}</span>.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -239,23 +228,6 @@ const MenuManagement = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            
-            {/* Change Picture Dialog */}
-            <Dialog open={isChangePictureOpen} onOpenChange={setIsChangePictureOpen}>
-                <DialogContent className="max-w-md">
-                     <DialogHeader>
-                        <DialogTitle>Change Picture for: {selectedItem?.name}</DialogTitle>
-                        <DialogDescription>
-                           Upload a new image for this menu item. The change will be saved immediately.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <MediaUploader onUploadComplete={(url) => handleImageUpload(url)} purpose="gallery" />
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
         </>
     );
 };

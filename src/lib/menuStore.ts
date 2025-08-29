@@ -1,51 +1,63 @@
 
 import { create } from 'zustand';
-import { getAllMenuItems, MenuItem } from './menuData';
+import { MenuItem } from './menuData';
+import { getMenuItems, upsertMenuItem, deleteMenuItem } from '@/app/(dashboard)/actions';
 
 interface MenuState {
   menuItems: MenuItem[];
   isLoading: boolean;
   error: string | null;
-  fetchMenuItems: () => void;
-  addMenuItem: (item: MenuItem) => void;
-  updateMenuItem: (item: MenuItem) => void;
-  removeMenuItem: (id: string) => void;
+  fetchMenuItems: () => Promise<void>;
+  addMenuItem: (item: Omit<MenuItem, 'id' | 'slug'>) => Promise<void>;
+  updateMenuItem: (item: MenuItem) => Promise<void>;
+  removeMenuItem: (id: string) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
   menuItems: [],
   isLoading: true,
   error: null,
-  fetchMenuItems: () => {
+  fetchMenuItems: async () => {
     try {
       set({ isLoading: true, error: null });
-      const items = getAllMenuItems();
+      const items = await getMenuItems();
       set({ menuItems: items, isLoading: false });
-    } catch (e) {
-      set({ error: 'Failed to fetch menu items from local data.', isLoading: false });
+    } catch (e: any) {
+      set({ error: e.message || 'Failed to fetch menu items.', isLoading: false });
     }
   },
-  addMenuItem: (item) => {
-    // This is a placeholder. In a real app with a DB, you'd call an API.
-    // Since menuData is read-only, we can't truly add to it at runtime this way.
-    // This simulates the UI update.
-    set((state) => ({
-      menuItems: [...state.menuItems, item],
-    }));
+  addMenuItem: async (itemData) => {
+    try {
+        const newItem = await upsertMenuItem(itemData);
+        set((state) => ({
+            menuItems: [...state.menuItems, newItem],
+        }));
+    } catch (e: any) {
+        console.error("Failed to add menu item:", e);
+        // Optionally update the state to show an error
+    }
   },
-  updateMenuItem: (updatedItem) => {
-    set((state) => ({
-      menuItems: state.menuItems.map((item) =>
-        item.id === updatedItem.id ? updatedItem : item
-      ),
-    }));
+  updateMenuItem: async (updatedItem) => {
+     try {
+        const item = await upsertMenuItem(updatedItem);
+        set((state) => ({
+          menuItems: state.menuItems.map((i) => (i.id === item.id ? item : i)),
+        }));
+    } catch (e: any) {
+        console.error("Failed to update menu item:", e);
+    }
   },
-  removeMenuItem: (id) => {
-    set((state) => ({
-      menuItems: state.menuItems.filter((item) => item.id !== id),
-    }));
+  removeMenuItem: async (id) => {
+    try {
+        await deleteMenuItem(id);
+        set((state) => ({
+          menuItems: state.menuItems.filter((item) => item.id !== id),
+        }));
+    } catch (e: any) {
+        console.error("Failed to delete menu item:", e);
+    }
   },
 }));
 
-// Auto-fetch data when the store is initialized
+// Initial fetch when the app loads
 useMenuStore.getState().fetchMenuItems();
