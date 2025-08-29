@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import {
 import QrCode from "@/components/QrCode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { MenuItem, MenuData } from "@/lib/menuData";
+import { MenuItem, menuData } from "@/lib/menuData";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -25,16 +26,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useMenuStore } from "@/lib/menuStore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
-type MenuCategoryTitle = keyof MenuData;
-type FilterCategory = 'All' | MenuCategoryTitle;
+type FilterCategory = 'All' | string;
 
 const MenuPage = () => {
   const qrCodeRef = useRef<HTMLDivElement>(null);
-  const { menuItems, isLoading } = useMenuStore();
   const [isClient, setIsClient] = useState(false);
   const [menuUrl, setMenuUrl] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,21 +54,8 @@ const MenuPage = () => {
   }
 
   const menuCategoriesList = useMemo(() => {
-    if (!menuItems) return [];
-    const categories: { [key: string]: MenuItem[] } = {};
-
-    menuItems.forEach(item => {
-        if (!categories[item.category]) {
-            categories[item.category] = [];
-        }
-        categories[item.category].push(item);
-    });
-
-    return Object.keys(categories)
-        .map(key => ({ title: key as MenuCategoryTitle, items: categories[key as MenuCategoryTitle] }))
-        .sort((a,b) => formatCategoryTitle(a.title).localeCompare(formatCategoryTitle(b.title)));
-
-  }, [menuItems]);
+     return menuData.sort((a,b) => a.title.localeCompare(b.title));
+  }, []);
 
   const handleDownload = () => {
     const svgElement = qrCodeRef.current?.querySelector('svg');
@@ -125,7 +110,7 @@ const MenuPage = () => {
 
   }, [searchTerm, selectedCategory, menuCategoriesList]);
   
-  if (!isClient || isLoading) {
+  if (!isClient) {
     return (
        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
          <Skeleton className="h-12 w-1/2 mx-auto" />
@@ -224,7 +209,7 @@ const MenuPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                             {category.items.map((item) => (
                                 <MenuItemCard
-                                    key={item.id}
+                                    key={item.slug}
                                     {...item}
                                 />
                             ))}

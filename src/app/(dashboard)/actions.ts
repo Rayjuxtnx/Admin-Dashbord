@@ -1,15 +1,15 @@
+
 'use server'
 
 import 'dotenv/config';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { revalidatePath } from "next/cache";
-import { MenuItem } from '@/lib/menuData';
 
 // Initialize the Supabase client once for all functions in this file
-const supabase = await createServiceRoleClient();
+const supabase = createServiceRoleClient();
 
 async function ensureBucketExists(bucketName: string) {
-    const { data: buckets, error } = await supabase.storage.listBuckets();
+    const { data: buckets, error } = await (await supabase).storage.listBuckets();
 
     if (error) {
         console.error("Error listing buckets:", error);
@@ -20,7 +20,7 @@ async function ensureBucketExists(bucketName: string) {
 
     if (!bucketExists) {
         console.log(`Bucket '${bucketName}' not found. Creating it.`);
-        const { error: createError } = await supabase.storage.createBucket(bucketName, {
+        const { error: createError } = await (await supabase).storage.createBucket(bucketName, {
             public: true, // Set to true so media URLs are publicly accessible
         });
 
@@ -45,7 +45,7 @@ export async function uploadMedia(formData: FormData) {
 
   const filePath = `${Date.now()}-${file.name}`;
 
-  const { data: uploadData, error: uploadError } = await supabase.storage
+  const { data: uploadData, error: uploadError } = await (await supabase).storage
     .from(bucket)
     .upload(filePath, file);
 
@@ -54,7 +54,7 @@ export async function uploadMedia(formData: FormData) {
     throw new Error('Failed to upload file to Supabase Storage.', { cause: uploadError });
   }
 
-  const { data: publicUrlData } = supabase.storage
+  const { data: publicUrlData } = (await supabase).storage
     .from(bucket)
     .getPublicUrl(uploadData.path);
   
@@ -72,14 +72,14 @@ export async function uploadMedia(formData: FormData) {
     purpose: formData.get('purpose') as string || 'gallery',
   };
 
-  const { data: dbData, error: dbError } = await supabase
+  const { data: dbData, error: dbError } = await (await supabase)
     .from('gallery')
     .insert(metadata)
     .select();
 
   if (dbError) {
     console.error('Database Insert Error:', dbError);
-    await supabase.storage.from(bucket).remove([uploadData.path]);
+    await (await supabase).storage.from(bucket).remove([uploadData.path]);
     throw new Error('Failed to save media metadata to the database.', { cause: dbError });
   }
 
@@ -93,7 +93,7 @@ export async function uploadMedia(formData: FormData) {
 }
 
 export async function getGalleryMedia() {
-    const { data, error } = await supabase
+    const { data, error } = await (await supabase)
         .from('gallery')
         .select('url, type, alt_text')
         .eq('purpose', 'gallery')
@@ -107,7 +107,7 @@ export async function getGalleryMedia() {
 }
 
 export async function getRecentPayments() {
-  const { data, error } = await supabase
+  const { data, error } = await (await supabase)
     .from('payments')
     .select('phone_number, amount, created_at')
     .order('created_at', { ascending: false })
@@ -128,7 +128,7 @@ const parseAmount = (amount: any) => {
 
 export async function getSalesDataForChart() {
     // Fetch online payments (STK push)
-    const { data: onlineSales, error: onlineError } = await supabase
+    const { data: onlineSales, error: onlineError } = await (await supabase)
         .from('payments')
         .select('amount, created_at') // use created_at instead of date
         .eq('type', 'online');
@@ -139,7 +139,7 @@ export async function getSalesDataForChart() {
     }
 
     // Fetch verified manual payments from the new table
-    const { data: manualSales, error: manualError } = await supabase
+    const { data: manualSales, error: manualError } = await (await supabase)
         .from('payments')
         .select('amount, created_at') // use created_at instead of date
         .eq('type', 'manual');
@@ -157,7 +157,7 @@ export async function getSalesDataForChart() {
 
 
 export async function getDashboardCounts() {
-    const { count: reservationsCount, error: reservationsError } = await supabase
+    const { count: reservationsCount, error: reservationsError } = await (await supabase)
         .from('reservations')
         .select('*', { count: 'exact', head: true });
     
@@ -165,7 +165,7 @@ export async function getDashboardCounts() {
         console.error('Error fetching reservations count:', reservationsError);
     }
     
-    const { data: paymentsData, error: paymentsError } = await supabase
+    const { data: paymentsData, error: paymentsError } = await (await supabase)
         .from('payments')
         .select('amount');
 
@@ -188,7 +188,7 @@ export async function getDashboardCounts() {
 
 
 export async function getReservations() {
-  const { data, error } = await supabase
+  const { data, error } = await (await supabase)
     .from('reservations')
     .select('*')
     .order('created_at', { ascending: false });
@@ -201,7 +201,7 @@ export async function getReservations() {
 }
 
 export async function updateReservationStatus(id: number, status: 'paid' | 'pending' | 'cancelled' | 'not_paid') {
-    const { error } = await supabase
+    const { error } = await (await supabase)
         .from('reservations')
         .update({ payment_status: status })
         .eq('id', id);
@@ -214,7 +214,7 @@ export async function updateReservationStatus(id: number, status: 'paid' | 'pend
 }
 
 export async function deleteReservation(id: number) {
-    const { error } = await supabase
+    const { error } = await (await supabase)
         .from('reservations')
         .delete()
         .eq('id', id);
@@ -227,7 +227,7 @@ export async function deleteReservation(id: number) {
 }
 
 export async function submitManualPaymentConfirmation(formData: { name: string; phone: string; mpesaCode: string; amount: number; paymentTime: string; }) {
-    const { data, error } = await supabase
+    const { data, error } = await (await supabase)
         .from('manual_confirmations')
         .insert({
             mpesa_code: formData.mpesaCode,
@@ -251,7 +251,7 @@ export async function submitManualPaymentConfirmation(formData: { name: string; 
 }
 
 export async function getManualConfirmations() {
-  const { data, error } = await supabase
+  const { data, error } = await (await supabase)
     .from('manual_confirmations')
     .select('*')
     .order('created_at', { ascending: false });
@@ -264,7 +264,7 @@ export async function getManualConfirmations() {
 }
 
 export async function updateConfirmationStatus(id: number, status: 'verified' | 'pending' | 'invalid') {
-    const { error } = await supabase
+    const { error } = await (await supabase)
         .from('manual_confirmations')
         .update({ status: status })
         .eq('id', id);
@@ -276,63 +276,9 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
     revalidatePath('/manual-payments');
 }
 
-export async function getMenuItems(): Promise<MenuItem[]> {
-    const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .order('name', { ascending: true });
-
-    if (error) {
-        console.error("Error fetching menu items:", error);
-        throw new Error("Failed to fetch menu items.");
-    }
-    return data as MenuItem[];
-};
-
-export async function deleteMenuItem(id: string) {
-    const { error } = await supabase.from('menu_items').delete().eq('id', id);
-    if (error) {
-        console.error("Error deleting item:", error);
-        throw new Error("Failed to delete menu item.");
-    }
-    revalidatePath('/admin/menu');
-    revalidatePath('/menu');
-};
-
-export async function upsertMenuItem(item: MenuItem): Promise<MenuItem> {
-    // If slug is not present or is empty, create one from the name
-    const slug = item.slug || item.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
-
-    const record = { 
-        id: item.id || undefined,
-        slug: slug,
-        name: item.name, 
-        price: item.price, 
-        description: item.description,
-        image: item.image,
-        category: item.category
-    };
-
-    const { data, error } = await supabase
-        .from('menu_items')
-        .upsert(record, { onConflict: 'id' })
-        .select()
-        .single();
-
-
-    if (error) {
-        console.error("Error upserting item:", error);
-        throw new Error("Failed to upsert menu item.");
-    }
-
-    revalidatePath('/admin/menu');
-    revalidatePath('/menu');
-    
-    return data as MenuItem;
-}
 
 export async function getHomepageMedia() {
-    const { data, error } = await supabase
+    const { data, error } = await (await supabase)
         .from('homepage_media')
         .select('id, value');
 

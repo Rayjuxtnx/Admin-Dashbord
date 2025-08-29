@@ -6,14 +6,11 @@ import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Utensils, CalendarCheck, Newspaper, Video, Star } from "lucide-react";
 import AdminChart from "./AdminChart";
 import { RecentPayments } from "./RecentPayments";
-import { useMenuStore } from "@/lib/menuStore";
 import { useEffect, useState }from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import ReservationsList from "./ReservationsList";
 import { getReservations } from "./actions";
-import ManualConfirmationsList from "./ManualConfirmationsList";
-import MediaUploader from "./MediaUploader";
+import { getTotalMenuItems } from "@/lib/menuData";
 
 const blogPosts = [
   {
@@ -27,20 +24,27 @@ const blogPosts = [
   }
 ];
 
+const signatureDishes = [
+  { name: "Pilau Wednesday Special" },
+  { name: "Chef's Grilled Tilapia" },
+  { name: "Family Feast Platter" },
+];
+
+
 const AdminDashboardPage = () => {
-    const { menuItems, fetchMenuItems, isLoading: isMenuLoading } = useMenuStore();
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
     const [reservationCount, setReservationCount] = useState(0);
+    const [totalMenuItems, setTotalMenuItems] = useState(0);
 
     useEffect(() => {
       setIsClient(true);
       
       const fetchInitialData = async () => {
         try {
-            await fetchMenuItems();
             const reservations = await getReservations();
             setReservationCount(reservations.length);
+            setTotalMenuItems(getTotalMenuItems());
         } catch (error) {
             console.error("Failed to fetch initial data:", error);
             toast({
@@ -52,7 +56,7 @@ const AdminDashboardPage = () => {
       }
       
       fetchInitialData();
-    }, [fetchMenuItems, toast]);
+    }, [toast]);
 
     const handleUploadComplete = (url: string, type: 'image' | 'video', purpose: 'homepage_hero' | 'gallery') => {
         let title = '';
@@ -80,7 +84,6 @@ const AdminDashboardPage = () => {
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger asChild><Link href="/reservations">Reservations</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/manual-payments">Manual Payments</Link></TabsTrigger>
-                        <TabsTrigger asChild><Link href="/admin/menu">Menu Management</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/gallery">Photo Gallery</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/homepage-media">Homepage Media</Link></TabsTrigger>
                         <TabsTrigger asChild>
@@ -96,7 +99,7 @@ const AdminDashboardPage = () => {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">
-                                        {isMenuLoading ? '...' : menuItems.length}
+                                        {totalMenuItems}
                                     </div>
                                     <p className="text-xs text-muted-foreground">
                                         items available on the menu
@@ -125,12 +128,14 @@ const AdminDashboardPage = () => {
                             </Card>
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Videos Uploaded</CardTitle>
-                                    <Video className="h-4 w-4 text-muted-foreground" />
+                                    <CardTitle className="text-sm font-medium">Homepage Signature Dishes</CardTitle>
+                                    <Star className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">0</div>
-                                    <p className="text-xs text-muted-foreground">No videos uploaded yet</p>
+                                    <div className="text-2xl font-bold">{signatureDishes.length}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        dishes featured on the homepage
+                                    </p>
                                 </CardContent>
                             </Card>
                         </div>

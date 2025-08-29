@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -25,7 +26,7 @@ const links = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/reservations", label: "Reservations", icon: BookCopy },
   { href: "/manual-payments", label: "Manual Payments", icon: Landmark },
-  { href: "/menu", label: "Menu", icon: Utensils },
+  { href: "/menu", label: "Public Menu", icon: Utensils },
   { href: "/homepage-media", label: "Homepage Media", icon: ImageIcon },
   { href: "/video-gallery", label: "Video Gallery", icon: Video },
 ];
