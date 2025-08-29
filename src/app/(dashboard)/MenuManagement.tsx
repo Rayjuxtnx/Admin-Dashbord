@@ -1,3 +1,4 @@
+
 "use client";
 
 import { MenuItem } from "@/lib/menuData";
@@ -16,7 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import MediaUploader from "./MediaUploader";
 import { useMenuStore } from "@/lib/menuStore";
 import { Skeleton } from "@/components/ui/skeleton";
-import { upsertMenuItem, deleteMenuItem as deleteMenuItemAction } from "./actions";
 
 const MenuManagement = () => {
     const { toast } = useToast();
@@ -28,10 +28,9 @@ const MenuManagement = () => {
     const [isChangePictureOpen, setIsChangePictureOpen] = useState(false);
 
     useEffect(() => {
-        // The store now fetches automatically, but we can call it here
-        // if we need to refresh data on component mount.
+        // The store fetches automatically, but we can re-fetch if needed.
         // fetchMenuItems();
-    }, [fetchMenuItems]);
+    }, []);
 
     const handleEditClick = (item: MenuItem) => {
         setSelectedItem({...item});
@@ -50,13 +49,13 @@ const MenuManagement = () => {
     
     const handleAddClick = () => {
         setSelectedItem({
-            id: '', // Temporary ID, will be assigned by DB
+            id: `new-${Date.now()}`, // Temporary ID
             slug: '',
             name: '',
             price: '',
             description: '',
             image: `https://picsum.photos/200/200?random=${Math.random()}`,
-            category: 'tastyStarters'
+            category: 'Uncategorized'
         });
         setIsEditDialogOpen(true);
     }
@@ -64,49 +63,35 @@ const MenuManagement = () => {
     const handleSaveChanges = async () => {
         if (!selectedItem) return;
         
-        try {
-            const returnedItem = await upsertMenuItem(selectedItem);
-            
-            if (selectedItem.id) { // Existing item
-                updateMenuItem(returnedItem);
-            } else { // New item
-                addMenuItem(returnedItem);
-            }
-            
-            toast({
-                title: selectedItem.id ? "Item Updated" : "Item Added",
-                description: `${returnedItem.name} has been successfully saved.`,
+        // Since we are not using a database, we'll just update the state in the store
+        if (menuItems.some(item => item.id === selectedItem.id)) { // Existing item
+            updateMenuItem(selectedItem);
+             toast({
+                title: "Item Updated (Simulated)",
+                description: `${selectedItem.name} has been updated in the local state.`,
             });
-            setIsEditDialogOpen(false);
-            setSelectedItem(null);
-        } catch (e) {
-            toast({
-                variant: 'destructive',
-                title: "Save Failed",
-                description: "Could not save the menu item.",
+        } else { // New item
+            addMenuItem(selectedItem);
+             toast({
+                title: "Item Added (Simulated)",
+                description: `${selectedItem.name} has been added to the local state.`,
             });
         }
+        
+        setIsEditDialogOpen(false);
+        setSelectedItem(null);
     };
 
     const handleDeleteConfirm = async () => {
         if (!selectedItem) return;
 
-        try {
-            await deleteMenuItemAction(selectedItem.id);
-            removeMenuItem(selectedItem.id);
-            toast({
-                title: "Item Deleted",
-                description: `${selectedItem.name} has been removed from the menu.`,
-            });
-            setIsDeleteDialogOpen(false);
-            setSelectedItem(null);
-        } catch (e) {
-             toast({
-                variant: 'destructive',
-                title: "Delete Failed",
-                description: "Could not delete the menu item.",
-            });
-        }
+        removeMenuItem(selectedItem.id);
+        toast({
+            title: "Item Deleted (Simulated)",
+            description: `${selectedItem.name} has been removed from the local state.`,
+        });
+        setIsDeleteDialogOpen(false);
+        setSelectedItem(null);
     };
 
     const handleImageUpload = (newImageUrl: string) => {
@@ -114,22 +99,13 @@ const MenuManagement = () => {
 
         const updatedItem = { ...selectedItem, image: newImageUrl };
         setSelectedItem(updatedItem);
-        // Immediately try to save the change
-        upsertMenuItem(updatedItem).then(returnedItem => {
-             updateMenuItem(returnedItem);
-             toast({
-                title: "Image Updated",
-                description: `The image for ${selectedItem.name} has been successfully changed.`,
-            });
-            setIsChangePictureOpen(false);
-            setSelectedItem(null);
-        }).catch(() => {
-             toast({
-                variant: 'destructive',
-                title: "Update Failed",
-                description: "Could not update the image.",
-            });
-        })
+        updateMenuItem(updatedItem);
+        toast({
+            title: "Image Updated (Simulated)",
+            description: `The image for ${selectedItem.name} has been changed.`,
+        });
+        setIsChangePictureOpen(false);
+        setSelectedItem(null);
     }
 
     return (
@@ -138,7 +114,7 @@ const MenuManagement = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Menu Items</CardTitle>
-                        <CardDescription>Manage your restaurant's menu. You can edit, delete, or change images for any item.</CardDescription>
+                        <CardDescription>Manage your restaurant's menu. Changes are simulated and will reset on page refresh.</CardDescription>
                     </div>
                      <Button onClick={handleAddClick}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -220,7 +196,7 @@ const MenuManagement = () => {
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{selectedItem?.id ? 'Edit' : 'Add'}: {selectedItem?.name || 'New Item'}</DialogTitle>
+                        <DialogTitle>{selectedItem?.id.startsWith('new-') ? 'Add' : 'Edit'}: {selectedItem?.name || 'New Item'}</DialogTitle>
                         <DialogDescription>Make changes to this menu item. Click save when you're done.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">

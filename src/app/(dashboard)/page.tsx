@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { getReservations } from "./actions";
 import { getTotalMenuItems } from "@/lib/menuData";
+import { Button } from "@/components/ui/button";
+import MenuManagement from "./MenuManagement";
 
 const blogPosts = [
   {
@@ -53,21 +55,10 @@ const AdminDashboardPage = () => {
                 description: "Could not load dashboard data."
             })
         }
-      }
+      };
       
       fetchInitialData();
     }, [toast]);
-
-    const handleUploadComplete = (url: string, type: 'image' | 'video', purpose: 'homepage_hero' | 'gallery') => {
-        let title = '';
-        if(purpose === 'homepage_hero') title = `Homepage ${type} Updated!`;
-        if(purpose === 'gallery') title = `Gallery ${type} Updated!`;
-
-        toast({
-            title: title,
-            description: `The new ${type} is now live.`,
-        });
-    }
 
     if (!isClient) {
       return null;
@@ -84,6 +75,7 @@ const AdminDashboardPage = () => {
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger asChild><Link href="/reservations">Reservations</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/manual-payments">Manual Payments</Link></TabsTrigger>
+                        <TabsTrigger asChild><Link href="/menu">Public Menu</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/gallery">Photo Gallery</Link></TabsTrigger>
                         <TabsTrigger asChild><Link href="/homepage-media">Homepage Media</Link></TabsTrigger>
                         <TabsTrigger asChild>
@@ -130,7 +122,7 @@ const AdminDashboardPage = () => {
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Homepage Signature Dishes</CardTitle>
                                     <Star className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
+                                </Header>
                                 <CardContent>
                                     <div className="text-2xl font-bold">{signatureDishes.length}</div>
                                     <p className="text-xs text-muted-foreground">
@@ -152,7 +144,7 @@ const AdminDashboardPage = () => {
                                 <CardHeader>
                                     <CardTitle>Recent Payments (STK)</CardTitle>
                                     <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
-                                </CardHeader>
+                                </Header>
                                 <CardContent>
                                     <RecentPayments />
                                 </CardContent>
@@ -160,6 +152,9 @@ const AdminDashboardPage = () => {
                         </div>
                     </TabsContent>
                 </Tabs>
+            </div>
+             <div className="p-8 pt-6">
+                <MenuManagement />
             </div>
         </div>
     );

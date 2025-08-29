@@ -95,7 +95,7 @@ const MenuPage = () => {
     if (lowercasedSearchTerm.trim() !== '') {
       return categories
         .map(category => {
-          if (!category.items) return category;
+          if (!category.items) return { ...category, items: [] };
           const filteredItems = category.items.filter(item =>
             item.name.toLowerCase().includes(lowercasedSearchTerm) ||
             item.description?.toLowerCase().includes(lowercasedSearchTerm)
@@ -156,7 +156,7 @@ const MenuPage = () => {
                   <DialogDescription>
                     Scan this QR code with your phone's camera to open our interactive online menu.
                   </DialogDescription>
-                </DialogHeader>
+                </Header>
                 <div className="flex justify-center p-4" ref={qrCodeRef}>
                   <QrCode url={menuUrl} />
                 </div>
@@ -209,7 +209,7 @@ const MenuPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
                             {category.items.map((item) => (
                                 <MenuItemCard
-                                    key={item.slug}
+                                    key={item.id}
                                     {...item}
                                 />
                             ))}

@@ -301,3 +301,22 @@ export async function getHomepageMedia() {
         heroVideoUrl: media.hero_video_url || 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
     };
 }
+
+// These functions are placeholders since the menu is not in the database.
+// In a real application, these would interact with your database.
+export async function upsertMenuItem(item: any) {
+  console.log("Simulating upsert for:", item);
+  // In a real app, you would do:
+  // const { data, error } = await supabase.from('menu_items').upsert(item).select().single();
+  // if (error) throw error;
+  // return data;
+  return item;
+}
+
+export async function deleteMenuItem(itemId: string) {
+  console.log("Simulating delete for item ID:", itemId);
+  // In a real app, you would do:
+  // const { error } = await supabase.from('menu_items').delete().eq('id', itemId);
+  // if (error) throw error;
+  return;
+}
