@@ -1,88 +1,172 @@
 'use client';
 
-import { BookCopy, UtensilsCrossed } from "lucide-react";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { RecentPayments } from "@/components/dashboard/recent-payments";
-import { supabase } from "@/lib/supabase";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
+import { Utensils, CalendarCheck, Newspaper, Video, ListOrdered } from "lucide-react";
+import AdminChart from "./AdminChart";
+import { RecentPayments } from "./RecentPayments";
+import MediaUploader from "./MediaUploader";
+import MenuManagement from "./MenuManagement";
+import { useMenuStore } from "@/lib/menuStore";
 import { useEffect, useState } from "react";
-import { Landmark } from "lucide-react";
-import AdminChart from "@/components/dashboard/admin-chart";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { getDashboardCounts } from "./actions";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import ReservationsList from "./ReservationsList";
+import { getReservations } from "./actions";
+import ManualConfirmationsList from "./ManualConfirmationsList";
 
-export default function OverviewPage() {
-  const [menuItemsCount, setMenuItemsCount] = useState<number | string>("...");
-  const [reservationsCount, setReservationsCount] = useState<number | string>("...");
-  const [totalPayments, setTotalPayments] = useState<number | string>("...");
+const blogPosts = [
+  {
+    slug: "/blog/secret-nyama-choma"
+  },
+  {
+    slug: "/blog/pilau-vs-biryani"
+  },
+  {
+    slug: "/blog/mall-advantage"
+  }
+];
 
-  useEffect(() => {
-    const fetchCounts = async () => {
-      setMenuItemsCount("...");
-      setReservationsCount("...");
-      setTotalPayments("...");
+const AdminDashboardPage = () => {
+    const { menuData } = useMenuStore();
+    const { toast } = useToast();
+    const [isClient, setIsClient] = useState(false);
+    const [reservationCount, setReservationCount] = useState(0);
 
-      // The menu count is temporarily disabled until the menu table is created.
-      setMenuItemsCount(0); 
-
-      const { reservationsCount: resCount, totalPayments: totalRev } = await getDashboardCounts();
-      setReservationsCount(resCount);
-      setTotalPayments(totalRev);
-    };
-
-    fetchCounts();
-
-    const reservationChanges = supabase
-      .channel('table-db-changes-reservations')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, 
-        (payload) => fetchCounts()
-      )
-      .subscribe();
-      
-    const paymentChanges = supabase
-      .channel('table-db-changes-payments')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, 
-        (payload) => fetchCounts()
-      )
-      .subscribe();
-
-    return () => {
-        supabase.removeChannel(reservationChanges);
-        supabase.removeChannel(paymentChanges);
-    };
-  }, []);
+    const allMenuItems = useMemo(() => {
+        return Object.values(menuData).flat();
+    }, [menuData]);
 
 
-  return (
-    <div className="flex flex-col gap-8">
-        <header>
-            <h1 className="text-3xl font-bold font-headline tracking-tight">
-                Dashboard Overview
-            </h1>
-            <p className="text-muted-foreground">
-                Here's a quick look at your restaurant's performance.
-            </p>
-        </header>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard title="Total Menu Items" value={menuItemsCount.toString()} icon={UtensilsCrossed} description="Live count from database" />
-        <StatCard title="Active Reservations" value={reservationsCount.toString()} icon={BookCopy} description="Paid & Pending" />
-        <StatCard title="Total Verified Revenue" value={totalPayments.toString()} icon={Landmark} description="From all verified payments" />
-      </div>
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Sales Overview</CardTitle>
-                    <CardDescription>Online vs. Manual Payments</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <AdminChart />
-                </CardContent>
-            </Card>
+    useEffect(() => {
+      setIsClient(true);
+      const fetchReservationCount = async () => {
+        try {
+            const reservations = await getReservations();
+            setReservationCount(reservations.length);
+        } catch (error) {
+            console.error("Failed to fetch reservations:", error);
+            setReservationCount(0);
+        }
+      }
+      fetchReservationCount();
+    }, []);
+
+    const handleUploadComplete = (url: string, type: 'image' | 'video', purpose: 'homepage_hero' | 'gallery') => {
+        let title = '';
+        if(purpose === 'homepage_hero') title = `Homepage ${type} Updated!`;
+        if(purpose === 'gallery') title = `Gallery ${type} Updated!`;
+
+        toast({
+            title: title,
+            description: `The new ${type} is now live.`,
+        });
+    }
+
+    if (!isClient) {
+      return null;
+    }
+
+    return (
+        <div className="flex-col md:flex">
+            <div className="flex-1 space-y-4 p-8 pt-6">
+                <div className="flex items-center justify-between space-y-2">
+                    <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
+                </div>
+                <Tabs defaultValue="overview" className="space-y-4">
+                    <TabsList>
+                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="reservations">Reservations</TabsTrigger>
+                        <TabsTrigger value="manual_payments">Manual Payments</TabsTrigger>
+                        <TabsTrigger value="menu">Menu Management</TabsTrigger>
+                        <TabsTrigger value="gallery">Photo Gallery</TabsTrigger>
+                        <TabsTrigger value="uploads">Homepage Media</TabsTrigger>
+                        <TabsTrigger asChild>
+                           <Link href="/video-gallery">Video Gallery</Link>
+                        </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="overview" className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Menu Items</CardTitle>
+                                    <Utensils className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{allMenuItems.length}</div>
+                                    <p className="text-xs text-muted-foreground">items available on the menu</p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Reservations</CardTitle>
+                                    <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{reservationCount}</div>
+                                    <p className="text-xs text-muted-foreground">active bookings</p>
+                                </CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Published Blogs</CardTitle>
+                                    <Newspaper className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">+{blogPosts.length}</div>
+                                    <p className="text-xs text-muted-foreground">posts on the blog page</p>
+                                </CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Videos Uploaded</CardTitle>
+                                    <Video className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">0</div>
+                                    <p className="text-xs text-muted-foreground">No videos uploaded yet</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                            <Card className="col-span-4">
+                                <CardHeader>
+                                    <CardTitle>Sales Overview</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pl-2">
+                                    <AdminChart />
+                                </CardContent>
+                            </Card>
+                            <Card className="col-span-3">
+                                <CardHeader>
+                                    <CardTitle>Recent Payments (STK)</CardTitle>
+                                    <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <RecentPayments />
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+                     <TabsContent value="reservations" className="space-y-4">
+                        <ReservationsList />
+                    </TabsContent>
+                    <TabsContent value="manual_payments" className="space-y-4">
+                        <ManualConfirmationsList />
+                    </TabsContent>
+                    <TabsContent value="menu" className="space-y-4">
+                        <MenuManagement />
+                    </TabsContent>
+                    <TabsContent value="gallery" className="space-y-4">
+                        <MediaUploader onUploadComplete={(url, type) => handleUploadComplete(url, type, 'gallery')} purpose="gallery" />
+                    </TabsContent>
+                    <TabsContent value="uploads" className="space-y-4">
+                        <MediaUploader onUploadComplete={(url, type) => handleUploadComplete(url, type, 'homepage_hero')} purpose="homepage_hero" />
+                    </TabsContent>
+                </Tabs>
+            </div>
         </div>
-        <div>
-            <RecentPayments />
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
+
+export default AdminDashboardPage;
