@@ -15,14 +15,18 @@ interface MenuState {
 
 export const useMenuStore = create<MenuState>((set, get) => ({
   menuItems: [],
-  isLoading: true,
+  isLoading: false,
   error: null,
   fetchMenuItems: async () => {
+    // Only fetch if not already loading to prevent race conditions
+    if (get().isLoading) return;
+    
     try {
       set({ isLoading: true, error: null });
       const items = await getMenuItems();
       set({ menuItems: items, isLoading: false });
     } catch (e: any) {
+      console.error("Failed to fetch menu items:", e);
       set({ error: e.message || 'Failed to fetch menu items.', isLoading: false });
     }
   },
@@ -34,7 +38,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         }));
     } catch (e: any) {
         console.error("Failed to add menu item:", e);
-        // Optionally update the state to show an error
+        // Propagate the error to be caught in the component
+        throw e;
     }
   },
   updateMenuItem: async (updatedItem) => {
@@ -45,6 +50,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         }));
     } catch (e: any) {
         console.error("Failed to update menu item:", e);
+        throw e;
     }
   },
   removeMenuItem: async (id) => {
@@ -55,9 +61,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         }));
     } catch (e: any) {
         console.error("Failed to delete menu item:", e);
+        throw e;
     }
   },
 }));
-
-// Initial fetch when the app loads
-useMenuStore.getState().fetchMenuItems();

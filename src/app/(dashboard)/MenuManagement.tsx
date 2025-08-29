@@ -26,7 +26,7 @@ const MenuManagement = () => {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     useEffect(() => {
-        // The store fetches automatically, but we can re-fetch if needed.
+        // Fetch menu items when the component mounts
         fetchMenuItems();
     }, [fetchMenuItems]);
 
@@ -57,7 +57,14 @@ const MenuManagement = () => {
         if (!selectedItem) return;
 
         const action = selectedItem.id && menuItems.some(item => item.id === selectedItem.id) ? 'update' : 'add';
-        const promise = action === 'update' ? updateMenuItem(selectedItem as MenuItem) : addMenuItem(selectedItem as Omit<MenuItem, 'id' | 'slug'>);
+        
+        // Remove temporary ID before saving a new item
+        const itemToSave = { ...selectedItem };
+        if (action === 'add') {
+            delete itemToSave.id;
+        }
+        
+        const promise = action === 'update' ? updateMenuItem(itemToSave as MenuItem) : addMenuItem(itemToSave as Omit<MenuItem, 'id' | 'slug'>);
 
         try {
             await promise;
@@ -80,7 +87,7 @@ const MenuManagement = () => {
         if (!selectedItem || !selectedItem.id) return;
 
         try {
-            await removeMenuItem(selectedItem.id);
+            await removeMenuItem(String(selectedItem.id));
             toast({
                 title: "Item Deleted",
                 description: `${selectedItem.name} has been removed from the menu.`,
@@ -117,7 +124,10 @@ const MenuManagement = () => {
                             <Skeleton className="h-16 w-full" />
                          </div>
                     ) : error ? (
-                        <p className="text-destructive text-center">{error}</p>
+                        <div className="text-center py-8">
+                            <p className="text-destructive">{error}</p>
+                            <Button onClick={() => fetchMenuItems()} className="mt-4">Try Again</Button>
+                        </div>
                     ): (
                     <Table>
                         <TableHeader>
