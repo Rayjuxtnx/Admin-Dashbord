@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from "react"
 import {
   Table,
   TableBody,
@@ -17,14 +18,19 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Trash2, CheckCircle, XCircle, Clock } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { cn } from "@/lib/utils"
 
-const reservations = [
-  { id: 'RES001', customer: 'Alice Johnson', date: '2024-08-15', time: '19:00', guests: 4, preorder: '2x Steak, 1x Salmon', requests: 'Window seat', status: 'Paid' },
-  { id: 'RES002', customer: 'Bob Williams', date: '2024-08-16', time: '20:30', guests: 2, preorder: 'None', requests: 'Quiet table', status: 'Pending' },
-  { id: 'RES003', customer: 'Charlie Brown', date: '2024-08-16', time: '18:00', guests: 5, preorder: '1x Vegan Pasta, 2x Chicken Salad', requests: 'High chair needed', status: 'Paid' },
-  { id: 'RES004', customer: 'Diana Miller', date: '2024-08-17', time: '19:30', guests: 2, preorder: 'Bottle of Red Wine', requests: '', status: 'Cancelled' },
-  { id: 'RES005', customer: 'Ethan Davis', date: '2024-08-18', time: '20:00', guests: 3, preorder: 'None', requests: 'Birthday celebration', status: 'Pending' },
-]
+type Reservation = {
+  id: string
+  customer: string
+  date: string
+  time: string
+  guests: number
+  preorder: string
+  requests: string
+  status: 'Paid' | 'Pending' | 'Cancelled'
+}
 
 const statusStyles: { [key: string]: string } = {
   Paid: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300",
@@ -33,6 +39,50 @@ const statusStyles: { [key: string]: string } = {
 }
 
 export default function ReservationsPage() {
+  const [reservations, setReservations] = useState<Reservation[]>([])
+
+  const fetchReservations = async () => {
+    const { data, error } = await supabase.from('reservations').select('*').order('date', { ascending: false });
+    if (error) {
+      console.error('Error fetching reservations:', error)
+    } else if (data) {
+      setReservations(data as Reservation[])
+    }
+  }
+
+  useEffect(() => {
+    fetchReservations();
+
+    const channel = supabase
+      .channel('realtime reservations')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reservations' },
+        (payload) => {
+          fetchReservations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    }
+  }, [])
+
+  const updateReservationStatus = async (id: string, status: Reservation['status']) => {
+    const { error } = await supabase.from('reservations').update({ status }).eq('id', id);
+    if (error) {
+      console.error('Error updating reservation status:', error);
+    }
+  };
+
+  const deleteReservation = async (id: string) => {
+    const { error } = await supabase.from('reservations').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting reservation:', error);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <header>
@@ -60,7 +110,7 @@ export default function ReservationsPage() {
               <TableRow key={reservation.id}>
                 <TableCell className="font-medium">{reservation.customer}</TableCell>
                 <TableCell>
-                  <div>{reservation.date} at {reservation.time}</div>
+                  <div>{new Date(reservation.date).toLocaleDateString()} at {reservation.time}</div>
                   <div className="text-sm text-muted-foreground">{reservation.guests} guests</div>
                   {reservation.requests && <div className="text-sm text-muted-foreground">Note: {reservation.requests}</div>}
                 </TableCell>
@@ -76,10 +126,10 @@ export default function ReservationsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem><CheckCircle className="mr-2 h-4 w-4" />Mark as Paid</DropdownMenuItem>
-                      <DropdownMenuItem><Clock className="mr-2 h-4 w-4" />Mark as Pending</DropdownMenuItem>
-                      <DropdownMenuItem><XCircle className="mr-2 h-4 w-4" />Mark as Cancelled</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => updateReservationStatus(reservation.id, 'Paid')}><CheckCircle className="mr-2 h-4 w-4" />Mark as Paid</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => updateReservationStatus(reservation.id, 'Pending')}><Clock className="mr-2 h-4 w-4" />Mark as Pending</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => updateReservationStatus(reservation.id, 'Cancelled')}><XCircle className="mr-2 h-4 w-4" />Mark as Cancelled</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => deleteReservation(reservation.id)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

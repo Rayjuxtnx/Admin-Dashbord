@@ -1,3 +1,5 @@
+'use client'
+
 import Image from "next/image"
 import {
   Card,
@@ -26,53 +28,65 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { supabase } from "@/lib/supabase"
+import { useState, useEffect } from "react"
 
-const menuItems = [
-  {
-    name: "Grilled Salmon",
-    price: "KES 1850",
-    description: "Fresh salmon fillet grilled to perfection, served with asparagus and lemon butter sauce.",
-    image: "https://picsum.photos/600/400?random=1",
-    dataAiHint: "grilled salmon"
-  },
-  {
-    name: "Wagyu Burger",
-    price: "KES 2200",
-    description: "Premium Wagyu beef patty with truffle aioli, caramelized onions, and aged cheddar.",
-    image: "https://picsum.photos/600/400?random=2",
-    dataAiHint: "gourmet burger"
-  },
-  {
-    name: "Truffle Pasta",
-    price: "KES 1600",
-    description: "Homemade pasta in a creamy truffle sauce, topped with fresh parmesan.",
-    image: "https://picsum.photos/600/400?random=3",
-    dataAiHint: "truffle pasta"
-  },
-  {
-    name: "Chicken Alfredo",
-    price: "KES 1450",
-    description: "Classic creamy alfredo with grilled chicken breast and fettuccine.",
-    image: "https://picsum.photos/600/400?random=4",
-    dataAiHint: "chicken alfredo"
-  },
-    {
-    name: "Margherita Pizza",
-    price: "KES 1200",
-    description: "Traditional pizza with fresh mozzarella, San Marzano tomatoes, and basil.",
-    image: "https://picsum.photos/600/400?random=5",
-    dataAiHint: "margherita pizza"
-  },
-  {
-    name: "Caesar Salad",
-    price: "KES 950",
-    description: "Crisp romaine lettuce, croutons, parmesan cheese, and classic Caesar dressing.",
-    image: "https://picsum.photos/600/400?random=6",
-    dataAiHint: "caesar salad"
-  },
-]
+type MenuItem = {
+    id: string;
+    name: string;
+    price: string;
+    description: string;
+    image: string;
+    dataAiHint: string;
+}
 
 export default function MenuPage() {
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [selectedItem, setSelectedItem] = useState<MenuItem | undefined>(undefined);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+    const fetchMenuItems = async () => {
+        const { data, error } = await supabase.from('menu_items').select('*');
+        if (error) {
+            console.error("Error fetching menu items:", error);
+        } else {
+            setMenuItems(data as MenuItem[]);
+        }
+    };
+
+    useEffect(() => {
+        fetchMenuItems();
+        const channel = supabase
+            .channel('realtime menu_items')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'menu_items' },
+                () => fetchMenuItems()
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    const handleDelete = async (id: string) => {
+        const { error } = await supabase.from('menu_items').delete().eq('id', id);
+        if (error) {
+            console.error("Error deleting item:", error);
+        }
+    };
+
+    const openSheetForNew = () => {
+        setSelectedItem(undefined);
+        setIsSheetOpen(true);
+    };
+
+    const openSheetForEdit = (item: MenuItem) => {
+        setSelectedItem(item);
+        setIsSheetOpen(true);
+    };
+
   return (
     <div className="flex flex-col gap-8">
       <header className="flex items-center justify-between">
@@ -84,22 +98,17 @@ export default function MenuPage() {
             Add, edit, or delete items from your restaurant's menu.
             </p>
         </div>
-        <Sheet>
-            <SheetTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
-                </Button>
-            </SheetTrigger>
-            <MenuFormSheet />
-        </Sheet>
+        <Button onClick={openSheetForNew}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
+        </Button>
       </header>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {menuItems.map((item) => (
-          <Card key={item.name} className="flex flex-col overflow-hidden">
+          <Card key={item.id} className="flex flex-col overflow-hidden">
             <CardHeader className="relative p-0">
                 <Image
-                    src={item.image}
+                    src={item.image || 'https://picsum.photos/600/400'}
                     alt={item.name}
                     width={600}
                     height={400}
@@ -114,15 +123,10 @@ export default function MenuPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <Sheet>
-                                <SheetTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                        <FilePenLine className="mr-2 h-4 w-4" />Edit Item
-                                    </DropdownMenuItem>
-                                </SheetTrigger>
-                                <MenuFormSheet item={item} />
-                            </Sheet>
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem onSelect={() => openSheetForEdit(item)}>
+                                <FilePenLine className="mr-2 h-4 w-4" />Edit Item
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => item.id && handleDelete(item.id)}>
                                 <Trash2 className="mr-2 h-4 w-4" />Delete Item
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -139,12 +143,36 @@ export default function MenuPage() {
           </Card>
         ))}
       </div>
+       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <MenuFormSheet item={selectedItem} closeSheet={() => setIsSheetOpen(false)} />
+       </Sheet>
     </div>
   )
 }
 
 
-function MenuFormSheet({ item }: { item?: typeof menuItems[0] }) {
+function MenuFormSheet({ item, closeSheet }: { item?: MenuItem, closeSheet: () => void }) {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const name = formData.get('name') as string;
+        const price = formData.get('price') as string;
+        const description = formData.get('description') as string;
+
+        const record = { name, price, description };
+
+        if (item?.id) {
+            // Update
+            const { error } = await supabase.from('menu_items').update(record).eq('id', item.id);
+            if (error) console.error("Error updating item:", error);
+        } else {
+            // Create
+            const { error } = await supabase.from('menu_items').insert(record);
+            if (error) console.error("Error creating item:", error);
+        }
+        closeSheet();
+    };
+
     return (
         <SheetContent className="sm:max-w-lg">
             <SheetHeader>
@@ -153,22 +181,22 @@ function MenuFormSheet({ item }: { item?: typeof menuItems[0] }) {
                     {item ? "Update the details for this menu item." : "Fill out the form to add a new item to your menu."}
                 </SheetDescription>
             </SheetHeader>
-            <form className="grid gap-4 py-8">
+            <form className="grid gap-4 py-8" onSubmit={handleSubmit}>
                 <div className="grid gap-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input id="name" defaultValue={item?.name} />
+                    <Input id="name" name="name" defaultValue={item?.name} />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="price">Price</Label>
-                    <Input id="price" defaultValue={item?.price} />
+                    <Input id="price" name="price" defaultValue={item?.price} />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" defaultValue={item?.description} />
+                    <Textarea id="description" name="description" defaultValue={item?.description} />
                 </div>
                 <div className="grid gap-2">
                     <Label htmlFor="picture">Picture</Label>
-                    <Input id="picture" type="file" />
+                    <Input id="picture" name="picture" type="file" />
                 </div>
                 <Button type="submit" className="mt-4">{item ? "Save Changes" : "Create Item"}</Button>
             </form>
