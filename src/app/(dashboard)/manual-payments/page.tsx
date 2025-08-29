@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from "react"
 import {
   Table,
   TableBody,
@@ -17,14 +18,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Trash2, CheckCircle, XCircle, Clock } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import { cn } from "@/lib/utils"
 
-const payments = [
-    { id: 'MPESA001', customer: 'Grace Kimani', amount: 'KES 2,500', date: '2024-08-14', status: 'Verified' },
-    { id: 'MPESA002', customer: 'David Otieno', amount: 'KES 800', date: '2024-08-14', status: 'Pending' },
-    { id: 'MPESA003', customer: 'Sophia Wanjiru', amount: 'KES 5,200', date: '2024-08-13', status: 'Invalid' },
-    { id: 'MPESA004', customer: 'James Mwangi', amount: 'KES 1,500', date: '2024-08-13', status: 'Verified' },
-    { id: 'MPESA005', customer: 'Mary Akinyi', amount: 'KES 3,000', date: '2024-08-12', status: 'Pending' },
-]
+type Payment = {
+  id: string
+  customer: string
+  amount: string
+  date: string
+  status: 'Verified' | 'Pending' | 'Invalid'
+}
 
 const statusStyles: { [key: string]: string } = {
   Verified: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300",
@@ -33,6 +36,46 @@ const statusStyles: { [key: string]: string } = {
 }
 
 export default function ManualPaymentsPage() {
+  const [payments, setPayments] = useState<Payment[]>([])
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      const { data, error } = await supabase.from('payments').select('*')
+      if (error) {
+        console.error('Error fetching payments:', error)
+      } else if (data) {
+        setPayments(data as Payment[])
+      }
+    }
+
+    fetchPayments()
+
+    const channel = supabase
+      .channel('realtime payments')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payments' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setPayments((prev) => [...prev, payload.new as Payment])
+          }
+          if (payload.eventType === 'UPDATE') {
+            setPayments((prev) => 
+                prev.map(p => p.id === payload.new.id ? payload.new as Payment : p)
+            )
+          }
+          if (payload.eventType === 'DELETE') {
+             setPayments((prev) => prev.filter(p => p.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
   return (
     <div className="flex flex-col gap-8">
       <header>
@@ -62,7 +105,7 @@ export default function ManualPaymentsPage() {
                 <TableCell className="font-mono text-sm">{payment.id}</TableCell>
                 <TableCell className="font-medium">{payment.customer}</TableCell>
                 <TableCell>{payment.amount}</TableCell>
-                <TableCell>{payment.date}</TableCell>
+                <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <Badge className={cn("capitalize", statusStyles[payment.status])}>{payment.status}</Badge>
                 </TableCell>
