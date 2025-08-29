@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { getReservations } from "./actions";
 import { getTotalMenuItems } from "@/lib/menuData";
-import { Button } from "@/components/ui/button";
 import MenuManagement from "./MenuManagement";
 
 const blogPosts = [
@@ -112,7 +111,7 @@ const AdminDashboardPage = () => {
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Published Blogs</CardTitle>
                                     <Newspaper className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
+                                </Header>
                                 <CardContent>
                                     <div className="text-2xl font-bold">+{blogPosts.length}</div>
                                     <p className="text-xs text-muted-foreground">posts on the blog page</p>
@@ -152,8 +151,6 @@ const AdminDashboardPage = () => {
                         </div>
                     </TabsContent>
                 </Tabs>
-            </div>
-             <div className="p-8 pt-6">
                 <MenuManagement />
             </div>
         </div>
