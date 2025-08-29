@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Image as ImageIcon } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Image as ImageIcon, PlusCircle } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -15,21 +15,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import MediaUploader from "./MediaUploader";
 import { useMenuStore } from "@/lib/menuStore";
+import { Skeleton } from "@/components/ui/skeleton";
+import { upsertMenuItem, deleteMenuItem as deleteMenuItemAction } from "./actions";
 
 const MenuManagement = () => {
     const { toast } = useToast();
-    const { menuItems, updateMenuItem, deleteMenuItem } = useMenuStore();
+    const { menuItems, isLoading, error, fetchMenuItems, addMenuItem, updateMenuItem, removeMenuItem } = useMenuStore();
+    
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isChangePictureOpen, setIsChangePictureOpen] = useState(false);
 
-    // This effect handles hydration mismatch between server and client
-    const [hydratedMenuItems, setHydratedMenuItems] = useState<MenuItem[]>([]);
     useEffect(() => {
-        setHydratedMenuItems(menuItems);
-    }, [menuItems]);
-
+        fetchMenuItems();
+    }, [fetchMenuItems]);
 
     const handleEditClick = (item: MenuItem) => {
         setSelectedItem({...item});
@@ -45,56 +45,114 @@ const MenuManagement = () => {
         setSelectedItem(item);
         setIsChangePictureOpen(true);
     }
+    
+    const handleAddClick = () => {
+        setSelectedItem({
+            id: '', // Temporary ID, will be assigned by DB
+            slug: '',
+            name: '',
+            price: '',
+            description: '',
+            image: `https://picsum.photos/200/200?random=${Math.random()}`,
+            category: 'tastyStarters'
+        });
+        setIsEditDialogOpen(true);
+    }
 
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
         if (!selectedItem) return;
         
-        updateMenuItem(selectedItem);
-        
-        toast({
-            title: "Item Updated",
-            description: `${selectedItem.name} has been successfully updated.`,
-        });
-        setIsEditDialogOpen(false);
-        setSelectedItem(null);
+        try {
+            const returnedItem = await upsertMenuItem(selectedItem);
+            
+            if (selectedItem.id) { // Existing item
+                updateMenuItem(returnedItem);
+            } else { // New item
+                addMenuItem(returnedItem);
+            }
+            
+            toast({
+                title: selectedItem.id ? "Item Updated" : "Item Added",
+                description: `${returnedItem.name} has been successfully saved.`,
+            });
+            setIsEditDialogOpen(false);
+            setSelectedItem(null);
+        } catch (e) {
+            toast({
+                variant: 'destructive',
+                title: "Save Failed",
+                description: "Could not save the menu item.",
+            });
+        }
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         if (!selectedItem) return;
 
-        deleteMenuItem(selectedItem.slug);
-        
-        toast({
-            title: "Item Deleted",
-            description: `${selectedItem.name} has been removed from the menu.`,
-        });
-        setIsDeleteDialogOpen(false);
-        setSelectedItem(null);
+        try {
+            await deleteMenuItemAction(selectedItem.id);
+            removeMenuItem(selectedItem.id);
+            toast({
+                title: "Item Deleted",
+                description: `${selectedItem.name} has been removed from the menu.`,
+            });
+            setIsDeleteDialogOpen(false);
+            setSelectedItem(null);
+        } catch (e) {
+             toast({
+                variant: 'destructive',
+                title: "Delete Failed",
+                description: "Could not delete the menu item.",
+            });
+        }
     };
 
     const handleImageUpload = (newImageUrl: string) => {
         if (!selectedItem) return;
 
         const updatedItem = { ...selectedItem, image: newImageUrl };
-        updateMenuItem(updatedItem);
-
-        toast({
-            title: "Image Updated",
-            description: `The image for ${selectedItem.name} has been successfully changed.`,
-        });
-        
-        setIsChangePictureOpen(false);
-        setSelectedItem(null);
+        setSelectedItem(updatedItem);
+        // Immediately try to save the change
+        upsertMenuItem(updatedItem).then(returnedItem => {
+             updateMenuItem(returnedItem);
+             toast({
+                title: "Image Updated",
+                description: `The image for ${selectedItem.name} has been successfully changed.`,
+            });
+            setIsChangePictureOpen(false);
+            setSelectedItem(null);
+        }).catch(() => {
+             toast({
+                variant: 'destructive',
+                title: "Update Failed",
+                description: "Could not update the image.",
+            });
+        })
     }
 
     return (
         <>
             <Card>
-                <CardHeader>
-                    <CardTitle>Menu Items</CardTitle>
-                    <CardDescription>Manage your restaurant's menu. You can edit, delete, or change images for any item.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Menu Items</CardTitle>
+                        <CardDescription>Manage your restaurant's menu. You can edit, delete, or change images for any item.</CardDescription>
+                    </div>
+                     <Button onClick={handleAddClick}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add New Item
+                    </Button>
                 </CardHeader>
                 <CardContent>
+                    {isLoading ? (
+                         <div className="space-y-4">
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                            <Skeleton className="h-16 w-full" />
+                         </div>
+                    ) : error ? (
+                        <p className="text-destructive text-center">{error}</p>
+                    ): (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -108,8 +166,8 @@ const MenuManagement = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {hydratedMenuItems.map((item) => (
-                                <TableRow key={`${item.slug}-${item.name}`}>
+                            {menuItems.map((item) => (
+                                <TableRow key={`${item.id}-${item.name}`}>
                                     <TableCell className="hidden sm:table-cell">
                                         <Image
                                             alt={item.name}
@@ -117,6 +175,7 @@ const MenuManagement = () => {
                                             height="64"
                                             src={item.image}
                                             width="64"
+                                            unoptimized
                                         />
                                     </TableCell>
                                     <TableCell className="font-medium">{item.name}</TableCell>
@@ -149,14 +208,15 @@ const MenuManagement = () => {
                             ))}
                         </TableBody>
                     </Table>
+                    )}
                 </CardContent>
             </Card>
 
-            {/* Edit Item Dialog */}
+            {/* Edit/Add Item Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edit: {selectedItem?.name}</DialogTitle>
+                        <DialogTitle>{selectedItem?.id ? 'Edit' : 'Add'}: {selectedItem?.name || 'New Item'}</DialogTitle>
                         <DialogDescription>Make changes to this menu item. Click save when you're done.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -198,11 +258,11 @@ const MenuManagement = () => {
             
             {/* Change Picture Dialog */}
             <Dialog open={isChangePictureOpen} onOpenChange={setIsChangePictureOpen}>
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-md">
                      <DialogHeader>
                         <DialogTitle>Change Picture for: {selectedItem?.name}</DialogTitle>
                         <DialogDescription>
-                           Upload a new image or video for this menu item.
+                           Upload a new image for this menu item. The change will be saved immediately.
                         </DialogDescription>
                     </DialogHeader>
                     <MediaUploader onUploadComplete={(url) => handleImageUpload(url)} purpose="gallery" />

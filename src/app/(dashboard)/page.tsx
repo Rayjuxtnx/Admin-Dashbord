@@ -2,13 +2,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
-import { Utensils, CalendarCheck, Newspaper, Video, ListOrdered } from "lucide-react";
+import { Utensils, CalendarCheck, Newspaper, Video } from "lucide-react";
 import AdminChart from "./AdminChart";
 import { RecentPayments } from "./RecentPayments";
 import MediaUploader from "./MediaUploader";
 import MenuManagement from "./MenuManagement";
 import { useMenuStore } from "@/lib/menuStore";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import ReservationsList from "./ReservationsList";
@@ -28,29 +28,31 @@ const blogPosts = [
 ];
 
 const AdminDashboardPage = () => {
-    const { menuItems } = useMenuStore();
+    const { menuItems, fetchMenuItems } = useMenuStore();
     const { toast } = useToast();
     const [isClient, setIsClient] = useState(false);
     const [reservationCount, setReservationCount] = useState(0);
 
-    const allMenuItems = useMemo(() => {
-        return menuItems || [];
-    }, [menuItems]);
-
-
     useEffect(() => {
       setIsClient(true);
-      const fetchReservationCount = async () => {
+      
+      const fetchInitialData = async () => {
         try {
+            await fetchMenuItems();
             const reservations = await getReservations();
             setReservationCount(reservations.length);
         } catch (error) {
-            console.error("Failed to fetch reservations:", error);
-            setReservationCount(0);
+            console.error("Failed to fetch initial data:", error);
+            toast({
+                variant: 'destructive',
+                title: "Error",
+                description: "Could not load dashboard data."
+            })
         }
       }
-      fetchReservationCount();
-    }, []);
+      
+      fetchInitialData();
+    }, [fetchMenuItems, toast]);
 
     const handleUploadComplete = (url: string, type: 'image' | 'video', purpose: 'homepage_hero' | 'gallery') => {
         let title = '';
@@ -93,7 +95,7 @@ const AdminDashboardPage = () => {
                                     <Utensils className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">{allMenuItems.length}</div>
+                                    <div className="text-2xl font-bold">{menuItems.length}</div>
                                     <p className="text-xs text-muted-foreground">items available on the menu</p>
                                 </CardContent>
                             </Card>

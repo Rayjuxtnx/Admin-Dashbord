@@ -1,29 +1,44 @@
 import { create } from 'zustand';
-import { menuData, MenuItem } from './menuData';
-
-// Flatten all menu items into a single array
-const allMenuItems = Object.values(menuData).flat();
+import { MenuItem } from './menuData';
+import { getMenuItems } from '@/app/(dashboard)/actions';
 
 interface MenuState {
   menuItems: MenuItem[];
+  isLoading: boolean;
+  error: string | null;
+  fetchMenuItems: () => Promise<void>;
   setMenuItems: (items: MenuItem[]) => void;
   updateMenuItem: (item: MenuItem) => void;
-  deleteMenuItem: (itemSlug: string) => void;
+  removeMenuItem: (itemId: string) => void;
   addMenuItem: (item: MenuItem) => void;
 }
 
-export const useMenuStore = create<MenuState>((set) => ({
-  menuItems: allMenuItems,
+export const useMenuStore = create<MenuState>((set, get) => ({
+  menuItems: [],
+  isLoading: true,
+  error: null,
+  fetchMenuItems: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const items = await getMenuItems();
+      set({ menuItems: items, isLoading: false });
+    } catch (error) {
+      set({ error: 'Failed to load menu items.', isLoading: false });
+    }
+  },
   setMenuItems: (items) => set({ menuItems: items }),
   updateMenuItem: (updatedItem) => set(state => ({
     menuItems: state.menuItems.map(item => 
-      item.slug === updatedItem.slug ? updatedItem : item
+      item.id === updatedItem.id ? updatedItem : item
     ),
   })),
-  deleteMenuItem: (itemSlug) => set(state => ({
-    menuItems: state.menuItems.filter(item => item.slug !== itemSlug),
+  removeMenuItem: (itemId) => set(state => ({
+    menuItems: state.menuItems.filter(item => item.id !== itemId),
   })),
   addMenuItem: (newItem) => set(state => ({
     menuItems: [...state.menuItems, newItem],
   })),
 }));
+
+// Initialize the store by fetching the menu items
+useMenuStore.getState().fetchMenuItems();

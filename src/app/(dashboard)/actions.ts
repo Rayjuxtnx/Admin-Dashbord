@@ -3,6 +3,7 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from "next/cache";
+import { MenuItem } from '@/lib/menuData';
 
 // Note: use the service role key to bypass RLS
 const supabase = createClient(
@@ -132,7 +133,7 @@ export async function getSalesDataForChart() {
     // Fetch online payments (STK push)
     const { data: onlineSales, error: onlineError } = await supabase
         .from('payments')
-        .select('amount, date')
+        .select('amount, created_at') // use created_at instead of date
         .eq('type', 'online');
 
     if (onlineError) {
@@ -143,19 +144,20 @@ export async function getSalesDataForChart() {
     // Fetch verified manual payments from the new table
     const { data: manualSales, error: manualError } = await supabase
         .from('payments')
-        .select('amount, date')
+        .select('amount, created_at') // use created_at instead of date
         .eq('type', 'manual');
 
     if (manualError) {
         console.error('Error fetching manual sales data:', manualError);
-        return { onlineSales: (onlineSales || []).map(d => ({...d, amount: parseAmount(d.amount)})), manualSales: [] };
+        return { onlineSales: (onlineSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at})), manualSales: [] };
     }
 
     return { 
-        onlineSales: (onlineSales || []).map(d => ({...d, amount: parseAmount(d.amount)})), 
-        manualSales: (manualSales || []).map(d => ({...d, amount: parseAmount(d.amount)}))
+        onlineSales: (onlineSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at})), 
+        manualSales: (manualSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at}))
     };
 }
+
 
 export async function getDashboardCounts() {
     const { count: reservationsCount, error: reservationsError } = await supabase
@@ -277,13 +279,17 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
     revalidatePath('/manual-payments');
 }
 
-export async function getMenuItems() {
-    const { data, error } = await supabase.from('menu_items').select('*');
+export async function getMenuItems(): Promise<MenuItem[]> {
+    const { data, error } = await supabase
+        .from('menu_items')
+        .select('*')
+        .order('name', { ascending: true });
+
     if (error) {
         console.error("Error fetching menu items:", error);
-        return [];
+        throw new Error("Failed to fetch menu items.");
     }
-    return data;
+    return data as MenuItem[];
 };
 
 export async function deleteMenuItem(id: string) {
@@ -292,31 +298,40 @@ export async function deleteMenuItem(id: string) {
         console.error("Error deleting item:", error);
         throw new Error("Failed to delete menu item.");
     }
+    revalidatePath('/admin/menu');
     revalidatePath('/menu');
 };
 
-export async function upsertMenuItem(formData: FormData, id?: string) {
-    const name = formData.get('name') as string;
-    const price = formData.get('price') as string;
-    const description = formData.get('description') as string;
+export async function upsertMenuItem(item: MenuItem): Promise<MenuItem> {
+    // If slug is not present or is empty, create one from the name
+    const slug = item.slug || item.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
 
-    const record = { name, price, description };
+    const record = { 
+        id: item.id || undefined,
+        slug: slug,
+        name: item.name, 
+        price: item.price, 
+        description: item.description,
+        image: item.image,
+        category: item.category
+    };
 
-    let error;
-    if (id) {
-        const result = await supabase.from('menu_items').update(record).eq('id', id);
-        error = result.error;
-    } else {
-        const result = await supabase.from('menu_items').insert(record);
-        error = result.error;
-    }
+    const { data, error } = await supabase
+        .from('menu_items')
+        .upsert(record, { onConflict: 'id' })
+        .select()
+        .single();
+
 
     if (error) {
         console.error("Error upserting item:", error);
         throw new Error("Failed to upsert menu item.");
     }
 
+    revalidatePath('/admin/menu');
     revalidatePath('/menu');
+    
+    return data as MenuItem;
 }
 
 export async function getHomepageMedia() {
@@ -343,5 +358,3 @@ export async function getHomepageMedia() {
         heroVideoUrl: media.hero_video_url || 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
     };
 }
-
-    
