@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getHomepageMedia } from "./actions";
+import { getHomepageMedia } from "../actions";
 import MediaUploader from "./MediaUploader";
 import { Skeleton } from "@/components/ui/skeleton";
 

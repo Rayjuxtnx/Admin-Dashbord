@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getReservations, updateReservationStatus, deleteReservation } from './actions';
+import { getReservations, updateReservationStatus, deleteReservation } from '../actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -13,9 +13,29 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Reservation } from './actions';
 
-type ReservationStatus = Reservation['payment_status'];
+type PreOrderItem = {
+    name: string;
+    price: string;
+}
+
+type ReservationStatus = 'pending' | 'paid' | 'not_paid' | 'cancelled';
+
+export type Reservation = {
+  id: number;
+  created_at: string;
+  name: string;
+  phone: string;
+  guests: number;
+  reservation_date: string;
+  reservation_time: string;
+  special_requests: string | null;
+  pre_ordered_items: PreOrderItem[] | null;
+  pre_order_total: number;
+  payment_status: ReservationStatus;
+  checkout_request_id: string | null;
+};
+
 
 const formatDate = (dateString: string) => {
     try {
@@ -50,7 +70,7 @@ export default function ReservationsList() {
   const fetchData = async () => {
       setIsLoading(true);
       const data = await getReservations();
-      setReservations(data);
+      setReservations(data as Reservation[]);
       setIsLoading(false);
   }
 

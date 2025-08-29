@@ -8,7 +8,7 @@ import { Upload, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { uploadMedia } from './actions';
+import { uploadMedia } from '../actions';
 
 type MediaUploaderProps = {
     onUploadComplete?: (url: string, type: 'image' | 'video', purpose: 'homepage_hero' | 'gallery') => void;
