@@ -13,18 +13,21 @@ interface MenuState {
   addMenuItem: (item: MenuItem) => void;
 }
 
+let hasFetched = false;
+
 export const useMenuStore = create<MenuState>((set, get) => ({
   menuItems: [],
-  isLoading: true,
+  isLoading: false,
   error: null,
   fetchMenuItems: async () => {
     // Prevent refetching if already loading or has data
-    if (get().isLoading || get().menuItems.length > 0) return;
+    if (get().isLoading || hasFetched) return;
     
     set({ isLoading: true, error: null });
     try {
       const items = await getMenuItems();
       set({ menuItems: items, isLoading: false });
+      hasFetched = true;
     } catch (error) {
       console.error("Failed to fetch menu items:", error);
       set({ error: 'Failed to load menu items.', isLoading: false });
