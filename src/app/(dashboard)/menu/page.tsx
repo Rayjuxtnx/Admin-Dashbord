@@ -49,24 +49,24 @@ export default function MenuPage() {
     const [isPending, startTransition] = useTransition();
 
     const fetchMenuItems = async () => {
-        const data = await getMenuItems();
-        setMenuItems(data as MenuItem[]);
+        // const data = await getMenuItems();
+        // setMenuItems(data as MenuItem[]);
     };
 
     useEffect(() => {
         fetchMenuItems();
-        const channel = supabase
-            .channel('realtime menu_items')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'menu_items' },
-                () => fetchMenuItems()
-            )
-            .subscribe();
+        // const channel = supabase
+        //     .channel('realtime menu_items')
+        //     .on(
+        //         'postgres_changes',
+        //         { event: '*', schema: 'public', table: 'menu_items' },
+        //         () => fetchMenuItems()
+        //     )
+        //     .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        // return () => {
+        //     supabase.removeChannel(channel);
+        // };
     }, []);
 
     const handleDelete = async (id: string) => {
@@ -100,6 +100,15 @@ export default function MenuPage() {
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
         </Button>
       </header>
+      
+      {menuItems.length === 0 && (
+          <Card className="flex items-center justify-center min-h-[300px]">
+              <CardContent className="text-center">
+                  <p className="text-muted-foreground">No menu items found.</p>
+                  <p className="text-sm text-muted-foreground">Click "Add New Item" to get started.</p>
+              </CardContent>
+          </Card>
+      )}
 
       <div className={cn("grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", isPending && "opacity-50")}>
         {menuItems.map((item) => (

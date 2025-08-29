@@ -17,16 +17,17 @@ export default function OverviewPage() {
   useEffect(() => {
     const fetchCounts = async () => {
       // Fetch menu items count
-      const { count: menuCount, error: menuError } = await supabase
-        .from('menu_items')
-        .select('*', { count: 'exact', head: true });
+      // const { count: menuCount, error: menuError } = await supabase
+      //   .from('menu_items')
+      //   .select('*', { count: 'exact', head: true });
 
-      if (!menuError) {
-        setMenuItemsCount(menuCount ?? 0);
-      } else {
-        console.error("Error fetching menu items count:", menuError);
-        setMenuItemsCount("N/A");
-      }
+      // if (!menuError) {
+      //   setMenuItemsCount(menuCount ?? 0);
+      // } else {
+      //   console.error("Error fetching menu items count:", menuError);
+      //   setMenuItemsCount("N/A");
+      // }
+      setMenuItemsCount(0); // Temporarily set to 0
 
       // Fetch active reservations count
       const { count: reservationsCount, error: reservationsError } = await supabase
@@ -61,12 +62,12 @@ export default function OverviewPage() {
 
     fetchCounts();
 
-    const menuChanges = supabase
-      .channel('table-db-changes-menu_items')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, 
-        (payload) => fetchCounts()
-      )
-      .subscribe();
+    // const menuChanges = supabase
+    //   .channel('table-db-changes-menu_items')
+    //   .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, 
+    //     (payload) => fetchCounts()
+    //   )
+    //   .subscribe();
 
     const reservationChanges = supabase
       .channel('table-db-changes-reservations')
@@ -83,7 +84,7 @@ export default function OverviewPage() {
       .subscribe();
 
     return () => {
-        supabase.removeChannel(menuChanges);
+        // supabase.removeChannel(menuChanges);
         supabase.removeChannel(reservationChanges);
         supabase.removeChannel(paymentChanges);
     };
