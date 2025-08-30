@@ -13,7 +13,7 @@ import { getDashboardCounts, getSalesDataForChart } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
 import { Skeleton } from "@/components/ui/skeleton";
-import ReservationsList from "./ReservationsList";
+import ReservationsList from "../(dashboard)/reservations/page";
 import ManualConfirmationsList from "./ManualConfirmationsList";
 import PostManagementPage from "./posts/page";
 import HomepageMediaPage from "./homepage-media/page";
@@ -145,7 +145,7 @@ const AdminDashboard = () => {
                         </TabsList>
                         <div className="px-4 md:px-6 lg:px-8">
                             <TabsContent value="overview" className="space-y-4 mt-0">
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
                                     <StatCard 
                                         title="Total Revenue"
                                         value={counts.totalRevenue}
@@ -175,8 +175,8 @@ const AdminDashboard = () => {
                                         isLoading={isLoading}
                                     />
                                 </div>
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                                    <Card className="col-span-4">
+                                <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+                                    <Card className="lg:col-span-4 col-span-full">
                                         <CardHeader>
                                             <CardTitle>Sales Overview</CardTitle>
                                         </CardHeader>
@@ -184,7 +184,7 @@ const AdminDashboard = () => {
                                             <AdminChart data={chartData} isLoading={isLoading}/>
                                         </CardContent>
                                     </Card>
-                                    <Card className="col-span-3">
+                                    <Card className="lg:col-span-3 col-span-full">
                                         <CardHeader>
                                             <CardTitle>Recent Payments (STK)</CardTitle>
                                             <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>

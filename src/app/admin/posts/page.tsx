@@ -146,25 +146,24 @@ const PostManagementPage = () => {
                             <p className="text-destructive">{error}</p>
                             <Button onClick={() => fetchPosts()} className="mt-4">Try Again</Button>
                         </div>
-                    ): (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Author</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead className="text-right">
-                                    <span className="sr-only">Actions</span>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
+                    ): posts.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            <p>No posts found. Click "New Post" to create one.</p>
+                        </div>
+                    ) : (
+                        <>
+                        {/* Mobile View */}
+                        <div className="grid gap-4 md:hidden">
                             {posts.map((post) => (
-                                <TableRow key={post.id}>
-                                    <TableCell className="font-medium">{post.title}</TableCell>
-                                    <TableCell>{post.author}</TableCell>
-                                    <TableCell>{formatDate(post.date)}</TableCell>
-                                    <TableCell className="text-right">
+                                <Card key={post.id}>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">{post.title}</CardTitle>
+                                        <CardDescription>by {post.author} on {formatDate(post.date)}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-sm text-muted-foreground line-clamp-2">{post.excerpt}</p>
+                                    </CardContent>
+                                    <CardFooter className="flex justify-end">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -174,32 +173,70 @@ const PostManagementPage = () => {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onSelect={() => handleEditClick(post)}>
-                                                    <Pencil className="mr-2 h-4 w-4" /> Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => handleDeleteClick(post)} className="text-destructive focus:text-destructive">
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handleEditClick(post)}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handleDeleteClick(post)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
+                                    </CardFooter>
+                                </Card>
                             ))}
-                        </TableBody>
-                    </Table>
+                        </div>
+
+                        {/* Desktop View */}
+                        <Table className="hidden md:table">
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Title</TableHead>
+                                    <TableHead>Author</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead className="text-right">
+                                        <span className="sr-only">Actions</span>
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {posts.map((post) => (
+                                    <TableRow key={post.id}>
+                                        <TableCell className="font-medium">{post.title}</TableCell>
+                                        <TableCell>{post.author}</TableCell>
+                                        <TableCell>{formatDate(post.date)}</TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Toggle menu</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onSelect={() => handleEditClick(post)}>
+                                                        <Pencil className="mr-2 h-4 w-4" /> Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => handleDeleteClick(post)} className="text-destructive focus:text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        </>
                     )}
                 </CardContent>
             </Card>
 
             {/* Edit/Add Post Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-3xl">
+                <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle>{selectedPost?.id?.toString().startsWith('new-') ? 'Add New Post' : 'Edit Post'}</DialogTitle>
                         <DialogDescription>Make changes to the post here. Click save when you're done.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-6 py-4">
+                    <div className="grid gap-6 py-4 overflow-y-auto flex-grow">
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <div className="space-y-2">
                                 <Label htmlFor="title">Title</Label>
