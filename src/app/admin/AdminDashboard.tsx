@@ -4,7 +4,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
-import { Utensils, CalendarCheck, Newspaper, Video, Landmark } from "lucide-react";
+import { Utensils, CalendarCheck, Newspaper, Video, Landmark, ChevronsUpDown } from "lucide-react";
 import AdminChart, { ProcessedSalesData } from "./AdminChart";
 import SalesByHourChart, { ProcessedSalesByHourData } from "./SalesByHourChart";
 import { RecentPayments } from "./RecentPayments";
@@ -24,6 +24,9 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 
 const AdminDashboard = () => {
@@ -31,6 +34,7 @@ const AdminDashboard = () => {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const isMobile = useIsMobile();
     
     const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
     const [counts, setCounts] = useState({
@@ -45,6 +49,16 @@ const AdminDashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
     
+    const TABS = [
+        { value: 'overview', label: 'Overview' },
+        { value: 'menu-management', label: 'Menu Management', count: menuItems.length, isLoading: menuLoading },
+        { value: 'reservations', label: 'Reservations', count: counts.reservationsCount, isLoading: isLoading },
+        { value: 'manual-payments', label: 'Manual Payments', count: counts.pendingManualPayments, isLoading: isLoading },
+        { value: 'posts', label: 'Posts', count: counts.publishedPostsCount, isLoading: isLoading },
+        { value: 'homepage-media', label: 'Homepage Media' },
+        { value: 'video-gallery', label: 'Video Gallery', count: counts.videosCount, isLoading: isLoading }
+    ];
+
     useEffect(() => {
         const currentTab = searchParams.get('tab') || 'overview';
         setActiveTab(currentTab);
@@ -131,6 +145,28 @@ const AdminDashboard = () => {
         </TabsTrigger>
     );
 
+    const MobileTabSelector = () => (
+         <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                    <span>{TABS.find(t => t.value === activeTab)?.label || 'Select View'}</span>
+                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                <DropdownMenuRadioGroup value={activeTab} onValueChange={handleTabChange}>
+                    {TABS.map((tab) => (
+                        <DropdownMenuRadioItem key={tab.value} value={tab.value}>
+                            {tab.label}
+                            {tab.isLoading ? <Skeleton className="ml-auto h-4 w-4 rounded-full" /> : (tab.count ?? 0) > 0 && <Badge variant="secondary" className="ml-auto">{tab.count}</Badge>}
+                        </DropdownMenuRadioItem>
+                    ))}
+                </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+
+
     return (
         <DashboardLayout>
             <div className="flex-col md:flex">
@@ -140,17 +176,17 @@ const AdminDashboard = () => {
                     </div>
                     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
                          <div className="px-4 md:px-6 lg:px-8">
-                            <div className="overflow-x-auto pb-2">
-                                <TabsList className="inline-flex h-auto md:h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max md:w-auto">
-                                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                                    <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
-                                    <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
-                                    <TabWithBadge value="manual-payments" label="Manual Payments" count={counts.pendingManualPayments} isLoading={isLoading} />
-                                    <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoading} />
-                                    <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
-                                    <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
-                                </TabsList>
-                            </div>
+                             {isMobile ? (
+                                <MobileTabSelector />
+                            ) : (
+                                <div className="overflow-x-auto pb-2">
+                                    <TabsList className="inline-flex h-auto md:h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max md:w-auto">
+                                        {TABS.map((tab) => (
+                                            <TabWithBadge key={tab.value} value={tab.value} label={tab.label} count={tab.count ?? 0} isLoading={tab.isLoading ?? false} />
+                                        ))}
+                                    </TabsList>
+                                </div>
+                            )}
                         </div>
                         <div className="px-4 md:px-6 lg:px-8">
                             <TabsContent value="overview" className="space-y-4 mt-0">
