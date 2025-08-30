@@ -123,7 +123,7 @@ const MenuManagement = () => {
                                             alt={item.name}
                                             className="aspect-square rounded-md object-cover"
                                             height="64"
-                                            src={item.image || 'https://picsum.photos/64'}
+                                            src={(item.image || 'https://picsum.photos/64').trim()}
                                             width="64"
                                             unoptimized
                                         />
