@@ -7,11 +7,8 @@ import { revalidatePath } from "next/cache";
 import type { MenuItem } from '@/lib/menuData';
 import type { BlogPost } from '@/lib/blogStore';
 
-
-// Initialize the Supabase client once for all functions in this file
-const supabase = createServiceRoleClient();
-
 async function ensureBucketExists(bucketName: string) {
+    const supabase = await createServiceRoleClient();
     const { data: buckets, error } = await supabase.storage.listBuckets();
 
     if (error) {
@@ -40,6 +37,7 @@ export async function uploadMedia(formData: FormData) {
   const file = formData.get('file') as File;
   const bucket = 'media';
   const purpose = formData.get('purpose') as 'homepage_hero' | 'gallery';
+  const supabase = await createServiceRoleClient();
 
 
   if (!file) {
@@ -103,9 +101,10 @@ export async function uploadMedia(formData: FormData) {
 
 
 export async function getGalleryMedia() {
+    const supabase = await createServiceRoleClient();
     const { data, error } = await supabase
         .from('gallery')
-        .select('id, url, type, alt_text, purpose, created_at')
+        .select('id, url, type, alt_text, purpose, created_at, path')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -116,6 +115,7 @@ export async function getGalleryMedia() {
 }
 
 export async function deleteGalleryMedia(id: number, path: string) {
+    const supabase = await createServiceRoleClient();
     const { error: dbError } = await supabase
         .from('gallery')
         .delete()
@@ -141,6 +141,7 @@ export async function deleteGalleryMedia(id: number, path: string) {
 }
 
 export async function getRecentPayments() {
+  const supabase = await createServiceRoleClient();
   const { data, error } = await supabase
     .from('payments')
     .select('phone_number, amount, created_at')
@@ -161,6 +162,7 @@ const parseAmount = (amount: any) => {
 }
 
 export async function getSalesDataForChart() {
+    const supabase = await createServiceRoleClient();
     // Fetch online payments (STK push)
     const { data: onlineSales, error: onlineError } = await supabase
         .from('payments')
@@ -191,6 +193,7 @@ export async function getSalesDataForChart() {
 
 
 export async function getDashboardCounts() {
+    const supabase = await createServiceRoleClient();
     const { count: reservationsCount, error: reservationsError } = await supabase
         .from('reservations')
         .select('*', { count: 'exact', head: true });
@@ -244,6 +247,7 @@ export async function getDashboardCounts() {
 
 
 export async function getReservations() {
+  const supabase = await createServiceRoleClient();
   const { data, error } = await supabase
     .from('reservations')
     .select('*')
@@ -257,6 +261,7 @@ export async function getReservations() {
 }
 
 export async function updateReservationStatus(id: number, status: 'paid' | 'pending' | 'cancelled' | 'not_paid') {
+    const supabase = await createServiceRoleClient();
     const { error } = await supabase
         .from('reservations')
         .update({ payment_status: status })
@@ -270,6 +275,7 @@ export async function updateReservationStatus(id: number, status: 'paid' | 'pend
 }
 
 export async function deleteReservation(id: number) {
+    const supabase = await createServiceRoleClient();
     const { error } = await supabase
         .from('reservations')
         .delete()
@@ -283,6 +289,7 @@ export async function deleteReservation(id: number) {
 }
 
 export async function submitManualPaymentConfirmation(formData: { name: string; phone: string; mpesaCode: string; amount: number; paymentTime: string; }) {
+    const supabase = await createServiceRoleClient();
     const { data, error } = await supabase
         .from('manual_confirmations')
         .insert({
@@ -307,6 +314,7 @@ export async function submitManualPaymentConfirmation(formData: { name: string; 
 }
 
 export async function getManualConfirmations() {
+  const supabase = await createServiceRoleClient();
   const { data, error } = await supabase
     .from('manual_confirmations')
     .select('*')
@@ -320,6 +328,7 @@ export async function getManualConfirmations() {
 }
 
 export async function updateConfirmationStatus(id: number, status: 'verified' | 'pending' | 'invalid') {
+    const supabase = await createServiceRoleClient();
     const { error } = await supabase
         .from('manual_confirmations')
         .update({ status: status })
@@ -335,6 +344,7 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
 
 // Server actions for menu items
 export async function getMenuItems(): Promise<MenuItem[]> {
+    const supabase = await createServiceRoleClient();
     const { data, error } = await supabase
         .from('menu_items')
         .select('*')
@@ -351,6 +361,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 };
 
 export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem> {
+  const supabase = await createServiceRoleClient();
   const itemToUpsert = {
     ...item,
     slug: item.name?.toLowerCase().replace(/\s+/g, '-') || `item-${Date.now()}`
@@ -378,6 +389,7 @@ export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem>
 }
 
 export async function deleteMenuItem(itemId: string) {
+  const supabase = await createServiceRoleClient();
   const { error } = await supabase
     .from('menu_items')
     .delete()
@@ -395,6 +407,7 @@ export async function deleteMenuItem(itemId: string) {
 
 // Server actions for blog posts
 export async function getBlogPosts(): Promise<BlogPost[]> {
+    const supabase = await createServiceRoleClient();
     const { data, error } = await supabase
         .from('blogs')
         .select('*')
@@ -408,6 +421,7 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 };
 
 export async function upsertBlogPost(post: Partial<BlogPost>): Promise<BlogPost> {
+  const supabase = await createServiceRoleClient();
   const postToUpsert = { ...post };
   
   if (postToUpsert.id && String(postToUpsert.id).startsWith('new-')) {
@@ -430,6 +444,7 @@ export async function upsertBlogPost(post: Partial<BlogPost>): Promise<BlogPost>
 }
 
 export async function deleteBlogPost(postId: number): Promise<void> {
+  const supabase = await createServiceRoleClient();
   const { error } = await supabase
     .from('blogs')
     .delete()
