@@ -19,16 +19,17 @@ import PostManagementPage from "./posts/page";
 import HomepageMediaPage from "./homepage-media/page";
 import VideoGalleryPage from "./video-gallery/page";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 
 
 const AdminDashboardPage = () => {
     const { toast } = useToast();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
-    const initialTab = searchParams.get('tab') || 'overview';
     
+    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
     const [isClient, setIsClient] = useState(false);
     const [counts, setCounts] = useState({
       reservationsCount: 0,
@@ -41,6 +42,11 @@ const AdminDashboardPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
     
+    useEffect(() => {
+        const currentTab = searchParams.get('tab') || 'overview';
+        setActiveTab(currentTab);
+    }, [searchParams]);
+
     const fetchDashboardData = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -136,7 +142,7 @@ const AdminDashboardPage = () => {
                     <div className="flex items-center justify-between space-y-2">
                         <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
                     </div>
-                    <Tabs defaultValue={initialTab} className="space-y-4">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                         <TabsList className="flex-wrap h-auto">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
@@ -145,7 +151,6 @@ const AdminDashboardPage = () => {
                             <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoading} />
                             <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
                             <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
-                            <TabsTrigger asChild><Link href="/menu">Public Menu</Link></TabsTrigger>
                         </TabsList>
                         <TabsContent value="overview" className="space-y-4">
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
