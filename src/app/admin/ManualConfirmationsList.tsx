@@ -164,7 +164,7 @@ export default function ManualConfirmationsList() {
                                 <TableCell className="font-medium">{c.customer_name}</TableCell>
                                 <TableCell>{c.customer_phone}</TableCell>
                                 <TableCell>Ksh {c.amount.toLocaleString()}</TableCell>
-                                <TableCell>{c.payment_time ? format(new Date(c.payment_time), "PPp") : 'N/A'}</TableCell>
+                                <TableCell>{c.payment_time ? c.payment_time.replace('T', ' ') : 'N/A'}</TableCell>
                                 <TableCell>{formatDate(c.created_at)}</TableCell>
                                 <TableCell className="text-center">{formatStatus(c.status)}</TableCell>
                                 <TableCell className="text-right">
