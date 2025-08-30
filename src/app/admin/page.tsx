@@ -4,12 +4,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Utensils, CalendarCheck, Newspaper, Video, Landmark } from "lucide-react";
-import AdminChart from "./AdminChart";
+import AdminChart, { ProcessedSalesData } from "./AdminChart";
 import { RecentPayments } from "./RecentPayments";
-import { useEffect, useState }from "react";
+import { useEffect, useState, useCallback }from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { getDashboardCounts } from "./actions";
+import { getDashboardCounts, getSalesDataForChart } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,68 +37,48 @@ const AdminDashboardPage = () => {
       videosCount: 0,
       pendingManualPayments: 0,
     });
-    const [isLoadingCounts, setIsLoadingCounts] = useState(true);
+    const [chartData, setChartData] = useState<ProcessedSalesData[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
     
-    const fetchInitialData = async () => {
-        setIsLoadingCounts(true);
+    const fetchDashboardData = useCallback(async () => {
+        setIsLoading(true);
         try {
-            const data = await getDashboardCounts();
-            setCounts(data);
+            const [countsData, salesData] = await Promise.all([
+              getDashboardCounts(),
+              getSalesDataForChart()
+            ]);
+            setCounts(countsData);
+            setChartData(salesData);
         } catch (error) {
-            console.error("Failed to fetch dashboard counts:", error);
+            console.error("Failed to fetch dashboard data:", error);
             toast({
                 variant: 'destructive',
                 title: "Error",
                 description: "Could not load dashboard data."
             })
         } finally {
-          setIsLoadingCounts(false);
+          setIsLoading(false);
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
       setIsClient(true);
       
-      fetchInitialData();
+      fetchDashboardData();
       fetchMenuItems();
       
       const channel = supabase
         .channel('realtime-dashboard-updates')
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'payments' },
+          { event: '*', schema: 'public' },
           (payload) => {
-            console.log('New payment detected, refreshing dashboard counts...');
-            fetchInitialData();
-          }
-        ).on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'manual_till_payments' },
-          (payload) => {
-            console.log('Manual payment change detected, refreshing dashboard counts...');
-            fetchInitialData();
-          }
-        ).on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'reservations' },
-          (payload) => {
-            console.log('Reservations change detected, refreshing dashboard counts...');
-            fetchInitialData();
-          }
-        ).on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'posts' },
-          (payload) => {
-            console.log('Posts change detected, refreshing dashboard counts...');
-            fetchInitialData();
-          }
-        ).on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'gallery' },
-          (payload) => {
-            console.log('Gallery change detected, refreshing dashboard counts...');
-            fetchInitialData();
+            console.log('Database change detected, refreshing dashboard data...', payload.table);
+            fetchDashboardData();
+            if (payload.table === 'menu_items') {
+                fetchMenuItems();
+            }
           }
         )
         .subscribe();
@@ -107,7 +87,7 @@ const AdminDashboardPage = () => {
           supabase.removeChannel(channel);
       }
 
-    }, [toast, fetchMenuItems]);
+    }, [toast, fetchMenuItems, fetchDashboardData]);
 
     if (!isClient) {
       return (
@@ -123,14 +103,14 @@ const AdminDashboardPage = () => {
       );
     }
 
-    const StatCard = ({ title, value, icon: Icon, description, isLoading }: { title: string, value: string | number, icon: React.ElementType, description: string, isLoading: boolean}) => (
+    const StatCard = ({ title, value, icon: Icon, description, isLoading: cardIsLoading }: { title: string, value: string | number, icon: React.ElementType, description: string, isLoading: boolean}) => (
        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{title}</CardTitle>
               <Icon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-              {isLoading ? (
+              {cardIsLoading ? (
                 <Skeleton className="h-8 w-1/2" />
               ) : (
                 <div className="text-2xl font-bold">{value}</div>
@@ -142,10 +122,10 @@ const AdminDashboardPage = () => {
       </Card>
     )
 
-    const TabWithBadge = ({ value, label, count, isLoading }: { value: string, label: string, count: number, isLoading: boolean}) => (
+    const TabWithBadge = ({ value, label, count, isLoading: badgeIsLoading }: { value: string, label: string, count: number, isLoading: boolean}) => (
         <TabsTrigger value={value} className="flex items-center gap-2">
             {label}
-            {isLoading ? <Skeleton className="h-5 w-5 rounded-full" /> : count > 0 && <Badge variant="secondary">{count}</Badge>}
+            {badgeIsLoading ? <Skeleton className="h-5 w-5 rounded-full" /> : count > 0 && <Badge variant="secondary">{count}</Badge>}
         </TabsTrigger>
     );
 
@@ -160,11 +140,11 @@ const AdminDashboardPage = () => {
                         <TabsList className="flex-wrap h-auto">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
-                            <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoadingCounts} />
-                            <TabWithBadge value="manual-payments" label="Manual Payments" count={counts.pendingManualPayments} isLoading={isLoadingCounts} />
-                            <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoadingCounts} />
+                            <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
+                            <TabWithBadge value="manual-payments" label="Manual Payments" count={counts.pendingManualPayments} isLoading={isLoading} />
+                            <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoading} />
                             <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
-                            <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoadingCounts} />
+                            <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
                             <TabsTrigger asChild><Link href="/menu">Public Menu</Link></TabsTrigger>
                         </TabsList>
                         <TabsContent value="overview" className="space-y-4">
@@ -174,14 +154,14 @@ const AdminDashboardPage = () => {
                                     value={counts.totalRevenue}
                                     icon={Landmark}
                                     description="from all successful payments"
-                                    isLoading={isLoadingCounts}
+                                    isLoading={isLoading}
                                 />
                                 <StatCard 
                                     title="Total Reservations"
                                     value={counts.reservationsCount}
                                     icon={CalendarCheck}
                                     description="active bookings"
-                                    isLoading={isLoadingCounts}
+                                    isLoading={isLoading}
                                 />
                                 <StatCard 
                                     title="Total Menu Items"
@@ -192,10 +172,10 @@ const AdminDashboardPage = () => {
                                 />
                                 <StatCard 
                                     title="Published Posts"
-                                    value={`+${counts.publishedPostsCount}`}
+                                    value={counts.publishedPostsCount}
                                     icon={Newspaper}
                                     description="posts on the blog page"
-                                    isLoading={isLoadingCounts}
+                                    isLoading={isLoading}
                                 />
                             </div>
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -204,7 +184,7 @@ const AdminDashboardPage = () => {
                                         <CardTitle>Sales Overview</CardTitle>
                                     </CardHeader>
                                     <CardContent className="pl-2">
-                                        <AdminChart />
+                                        <AdminChart data={chartData} isLoading={isLoading}/>
                                     </CardContent>
                                 </Card>
                                 <Card className="col-span-3">

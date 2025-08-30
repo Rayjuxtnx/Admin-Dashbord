@@ -1,9 +1,8 @@
 
 "use client"
 
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { getSalesDataForChart } from '@/app/admin/actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
@@ -11,6 +10,12 @@ type SalesData = {
     amount: number;
     created_at: string;
 }
+
+export type ProcessedSalesData = {
+    name: string;
+    online: number;
+    manual: number;
+};
 
 const chartConfig = {
   online: {
@@ -23,62 +28,13 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const processDataForChart = (onlineSales: SalesData[], manualSales: SalesData[]) => {
-    const monthlyTotals = [
-      { name: "Jan", online: 0, manual: 0 }, { name: "Feb", online: 0, manual: 0 },
-      { name: "Mar", online: 0, manual: 0 }, { name: "Apr", online: 0, manual: 0 },
-      { name: "May", online: 0, manual: 0 }, { name: "Jun", online: 0, manual: 0 },
-      { name: "Jul", online: 0, manual: 0 }, { name: "Aug", online: 0, manual: 0 },
-      { name: "Sep", online: 0, manual: 0 }, { name: "Oct", online: 0, manual: 0 },
-      { name: "Nov", online: 0, manual: 0 }, { name: "Dec", online: 0, manual: 0 },
-    ];
+type AdminChartProps = {
+    data: ProcessedSalesData[];
+    isLoading: boolean;
+}
 
-    const parseAmount = (amount: any) => {
-        if (!amount) return 0;
-        if (typeof amount === 'number') return amount;
-        return parseFloat(String(amount).replace(/[^0-9.-]+/g, "")) || 0;
-    }
-
-
-    onlineSales.forEach(sale => {
-        const saleDate = new Date(sale.created_at);
-        const monthIndex = saleDate.getMonth();
-        if (monthlyTotals[monthIndex]) {
-            monthlyTotals[monthIndex].online += parseAmount(sale.amount);
-        }
-    });
-    
-    manualSales.forEach(sale => {
-        const saleDate = new Date(sale.created_at);
-        const monthIndex = saleDate.getMonth();
-        if (monthlyTotals[monthIndex]) {
-            monthlyTotals[monthIndex].manual += parseAmount(sale.amount);
-        }
-    });
-
-    return monthlyTotals;
-};
-
-export default function AdminChart() {
-  const [data, setData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            const { onlineSales, manualSales } = await getSalesDataForChart();
-            const processedData = processDataForChart(onlineSales, manualSales);
-            setData(processedData);
-        } catch (error) {
-            console.error("Failed to fetch sales data:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-    fetchData();
-  }, [])
-
+export default function AdminChart({ data, isLoading }: AdminChartProps) {
+  
   if(isLoading) {
     return <Skeleton className="w-full h-[350px]" />
   }

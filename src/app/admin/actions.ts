@@ -186,7 +186,6 @@ export async function getSalesDataForChart() {
 
     if (onlineError) {
         console.error('Error fetching online sales data:', onlineError);
-        return { onlineSales: [], manualSales: [] };
     }
 
     const { data: manualSales, error: manualError } = await supabase
@@ -196,14 +195,38 @@ export async function getSalesDataForChart() {
 
     if (manualError) {
         console.error('Error fetching manual sales data:', manualError);
-        return { onlineSales: (onlineSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at})), manualSales: [] };
     }
 
-    return { 
-        onlineSales: (onlineSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at})), 
-        manualSales: (manualSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at}))
-    };
-}
+    const onlineSalesData = (onlineSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at}));
+    const manualSalesData = (manualSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at}));
+
+    const monthlyTotals = [
+      { name: "Jan", online: 0, manual: 0 }, { name: "Feb", online: 0, manual: 0 },
+      { name: "Mar", online: 0, manual: 0 }, { name: "Apr", online: 0, manual: 0 },
+      { name: "May", online: 0, manual: 0 }, { name: "Jun", online: 0, manual: 0 },
+      { name: "Jul", online: 0, manual: 0 }, { name: "Aug", online: 0, manual: 0 },
+      { name: "Sep", online: 0, manual: 0 }, { name: "Oct", online: 0, manual: 0 },
+      { name: "Nov", online: 0, manual: 0 }, { name: "Dec", online: 0, manual: 0 },
+    ];
+
+    onlineSalesData.forEach(sale => {
+        const saleDate = new Date(sale.created_at);
+        const monthIndex = saleDate.getMonth();
+        if (monthlyTotals[monthIndex]) {
+            monthlyTotals[monthIndex].online += sale.amount;
+        }
+    });
+    
+    manualSalesData.forEach(sale => {
+        const saleDate = new Date(sale.created_at);
+        const monthIndex = saleDate.getMonth();
+        if (monthlyTotals[monthIndex]) {
+            monthlyTotals[monthIndex].manual += sale.amount;
+        }
+    });
+
+    return monthlyTotals;
+};
 
 
 export async function getDashboardCounts() {
@@ -251,7 +274,7 @@ export async function getDashboardCounts() {
     // Gallery Videos Count
     const { count: videosCount, error: videosError } = await supabase
         .from('gallery')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('type', 'video')
         .eq('purpose', 'gallery');
         
