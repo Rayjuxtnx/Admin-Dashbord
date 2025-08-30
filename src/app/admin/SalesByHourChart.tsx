@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { Area, Bar, ComposedChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis, Line } from "recharts"
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export type ProcessedSalesByHourData = {
     hour: string;
@@ -29,6 +30,7 @@ type SalesByHourChartProps = {
 }
 
 export default function SalesByHourChart({ data, isLoading }: SalesByHourChartProps) {
+  const isMobile = useIsMobile();
   
   if(isLoading) {
     return <Skeleton className="w-full h-[350px]" />
@@ -45,6 +47,7 @@ export default function SalesByHourChart({ data, isLoading }: SalesByHourChartPr
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
+                interval={isMobile ? 3 : 0} 
             />
             <YAxis
                 stroke="#888888"
@@ -80,3 +83,5 @@ export default function SalesByHourChart({ data, isLoading }: SalesByHourChartPr
     </ChartContainer>
   )
 }
+
+    

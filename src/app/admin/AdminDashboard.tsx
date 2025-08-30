@@ -139,9 +139,9 @@ const AdminDashboard = () => {
                         <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
                     </div>
                     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-                        <div className="w-full px-4 md:px-6 lg:px-8">
-                             <div className="overflow-x-auto pb-2">
-                                <TabsList className="md:w-auto">
+                         <div className="px-4 md:px-6 lg:px-8">
+                            <div className="overflow-x-auto pb-2">
+                                <TabsList className="inline-flex h-auto md:h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground w-max md:w-auto">
                                     <TabsTrigger value="overview">Overview</TabsTrigger>
                                     <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
                                     <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
@@ -150,7 +150,7 @@ const AdminDashboard = () => {
                                     <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
                                     <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
                                 </TabsList>
-                             </div>
+                            </div>
                         </div>
                         <div className="px-4 md:px-6 lg:px-8">
                             <TabsContent value="overview" className="space-y-4 mt-0">
@@ -190,7 +190,7 @@ const AdminDashboard = () => {
                                             <CardTitle>Today's Sales by Hour</CardTitle>
                                             <CardDescription>Bar shows sales per hour, line shows cumulative total.</CardDescription>
                                         </CardHeader>
-                                        <CardContent className="pl-2">
+                                        <CardContent className="pl-0 md:pl-2">
                                             <SalesByHourChart data={dailyChartData} isLoading={isLoading}/>
                                         </CardContent>
                                     </Card>
@@ -199,7 +199,7 @@ const AdminDashboard = () => {
                                             <CardTitle>Monthly Sales Overview</CardTitle>
                                              <CardDescription>Online vs manually-entered sales.</CardDescription>
                                         </CardHeader>
-                                        <CardContent className="pl-2">
+                                        <CardContent className="pl-0 md:pl-2">
                                             <AdminChart data={monthlyChartData} isLoading={isLoading}/>
                                         </CardContent>
                                     </Card>
@@ -241,3 +241,5 @@ const AdminDashboard = () => {
 }
 
 export default AdminDashboard;
+
+    
