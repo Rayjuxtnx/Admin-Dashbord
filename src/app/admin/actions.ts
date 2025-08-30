@@ -217,19 +217,32 @@ export async function getDashboardCounts() {
         console.error('Error fetching reservations count:', reservationsError);
     }
     
-    const { data: paymentsData, error: paymentsError } = await supabase
+    // Fetch from both payments (for online) and verified manual_till_payments
+    const { data: onlinePaymentsData, error: onlinePaymentsError } = await supabase
         .from('payments')
         .select('amount');
+    
+    const { data: manualPaymentsData, error: manualPaymentsError } = await supabase
+        .from('manual_till_payments')
+        .select('amount')
+        .eq('status', 'verified');
 
     let totalRevenue = "Ksh 0";
-    if (!paymentsError) {
-        const total = paymentsData.reduce((acc, payment) => {
-            return acc + parseAmount(payment.amount);
-        }, 0);
-        totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(total);
-    } else {
-        console.error("Error fetching payments:", paymentsError);
+    let totalAmount = 0;
+
+    if (!onlinePaymentsError && onlinePaymentsData) {
+        totalAmount += onlinePaymentsData.reduce((acc, payment) => acc + parseAmount(payment.amount), 0);
+    } else if (onlinePaymentsError) {
+        console.error("Error fetching online payments:", onlinePaymentsError);
     }
+
+    if (!manualPaymentsError && manualPaymentsData) {
+        totalAmount += manualPaymentsData.reduce((acc, payment) => acc + parseAmount(payment.amount), 0);
+    } else if (manualPaymentsError) {
+        console.error("Error fetching verified manual payments:", manualPaymentsError);
+    }
+    
+    totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(totalAmount);
 
     const { count: publishedPostsCount, error: postsError } = await supabase
         .from('posts')
@@ -355,6 +368,7 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
     }
 
     // If the new status is 'verified', add a corresponding record to the main 'payments' table.
+    // This is for chart consistency and detailed payment tracking.
     if (status === 'verified') {
         const { data: confirmation } = await supabase
             .from('manual_till_payments')

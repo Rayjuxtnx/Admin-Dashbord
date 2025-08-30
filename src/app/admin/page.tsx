@@ -66,8 +66,8 @@ const AdminDashboardPage = () => {
       fetchInitialData();
       fetchMenuItems();
       
-      const channel = supabase
-        .channel('realtime dashboard-counts')
+      const paymentsChannel = supabase
+        .channel('realtime-dashboard-payments')
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'payments' },
@@ -77,9 +77,24 @@ const AdminDashboardPage = () => {
           }
         )
         .subscribe();
+      
+      const manualPaymentsChannel = supabase
+        .channel('realtime-dashboard-manual-payments')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'manual_till_payments' },
+          (payload) => {
+             if(payload.new.status === 'verified') {
+                console.log('Manual payment verified, refreshing dashboard counts...');
+                fetchInitialData();
+             }
+          }
+        )
+        .subscribe();
         
       return () => {
-          supabase.removeChannel(channel);
+          supabase.removeChannel(paymentsChannel);
+          supabase.removeChannel(manualPaymentsChannel);
       }
 
     }, [toast, fetchMenuItems]);
