@@ -134,18 +134,20 @@ const AdminDashboard = () => {
                         <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
                     </div>
                     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-                        <TabsList className="flex-wrap h-auto mx-4 md:mx-6 lg:mx-8">
-                            <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
-                            <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
-                            <TabWithBadge value="manual-payments" label="Manual Payments" count={counts.pendingManualPayments} isLoading={isLoading} />
-                            <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoading} />
-                            <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
-                            <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
-                        </TabsList>
+                        <div className="w-full overflow-x-auto px-4 md:px-6 lg:px-8">
+                             <TabsList className="h-auto md:flex-wrap md:h-10 md:w-auto">
+                                <TabsTrigger value="overview">Overview</TabsTrigger>
+                                <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
+                                <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
+                                <TabWithBadge value="manual-payments" label="Manual Payments" count={counts.pendingManualPayments} isLoading={isLoading} />
+                                <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoading} />
+                                <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
+                                <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
+                            </TabsList>
+                        </div>
                         <div className="px-4 md:px-6 lg:px-8">
                             <TabsContent value="overview" className="space-y-4 mt-0">
-                                <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+                                <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                                     <StatCard 
                                         title="Total Revenue"
                                         value={counts.totalRevenue}
