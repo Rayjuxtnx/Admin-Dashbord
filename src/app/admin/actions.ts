@@ -179,18 +179,17 @@ const parseAmount = (amount: any): number => {
 export async function getSalesDataForChart() {
     const supabase = createServiceRoleClient();
     
-    const { data: allPayments, error: paymentsError } = await supabase
+    // Fetch both online and verified manual payments
+    const { data: onlinePayments, error: onlineError } = await supabase
         .from('payments')
         .select('amount, created_at, type');
-    
-    if (paymentsError) {
-        console.error('Error fetching sales data:', paymentsError);
+
+    if (onlineError) {
+        console.error('Error fetching online payments:', onlineError);
         return [];
     }
     
-    if (!allPayments) {
-        return [];
-    }
+    const allPayments = onlinePayments || [];
 
     const monthlyTotals: { [key: string]: { name: string, online: number, manual: number, monthIndex: number } } = {};
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -212,11 +211,12 @@ export async function getSalesDataForChart() {
             monthlyTotals[key].manual += amount;
         }
     });
-
+    
     return Object.values(monthlyTotals)
-        .sort((a, b) => a.monthIndex - b.monthIndex)
+        .sort((a, b) => a.monthIndex - b.monthIndex) // Sort chronologically
         .map(({name, online, manual}) => ({name, online, manual}));
 };
+
 
 
 export async function getDashboardCounts() {
@@ -228,14 +228,12 @@ export async function getDashboardCounts() {
     
     if (reservationsError) console.error('Error fetching reservations count:', reservationsError);
 
-    // Fetch from automated payments table
     const { data: onlinePayments, error: onlineError } = await supabase
         .from('payments')
         .select('amount');
 
     if (onlineError) console.error("Error fetching online payments:", onlineError);
     
-    // Fetch from manual payments table (only verified ones)
     const { data: manualPayments, error: manualError } = await supabase
         .from('manual_till_payments')
         .select('amount')
@@ -393,7 +391,7 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
                         phone_number: confirmation.customer_phone,
                         raw_payload: confirmation, 
                         mpesa_receipt_number: confirmation.mpesa_code,
-                        created_at: confirmation.created_at, // Use the original creation time
+                        created_at: new Date().toISOString(),
                     });
                 if (paymentError) {
                      console.error("Error inserting into payments table after verification:", paymentError);
