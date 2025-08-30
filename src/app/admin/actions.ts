@@ -179,26 +179,41 @@ const parseAmount = (amount: any): number => {
 export async function getSalesDataForChart() {
     const supabase = createServiceRoleClient();
     
-    // Fetch both online and verified manual payments
+    // Fetch online payments from 'payments' table
     const { data: onlinePayments, error: onlineError } = await supabase
         .from('payments')
-        .select('amount, created_at, type');
+        .select('amount, created_at');
 
     if (onlineError) {
         console.error('Error fetching online payments:', onlineError);
         return [];
     }
     
-    const allPayments = onlinePayments || [];
+    // Fetch verified manual payments from 'manual_till_payments' table
+    const { data: manualPayments, error: manualError } = await supabase
+        .from('manual_till_payments')
+        .select('amount, created_at')
+        .eq('status', 'verified');
+        
+    if (manualError) {
+        console.error('Error fetching manual payments:', manualError);
+        return [];
+    }
+
+    // Combine and process data
+    const allSales = [
+        ...(onlinePayments || []).map(p => ({ ...p, type: 'online' })),
+        ...(manualPayments || []).map(p => ({ ...p, type: 'manual' }))
+    ];
 
     const monthlyTotals: { [key: string]: { name: string, online: number, manual: number, monthIndex: number } } = {};
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-    allPayments.forEach(sale => {
+    allSales.forEach(sale => {
         const saleDate = new Date(sale.created_at);
         const monthIndex = saleDate.getMonth();
         const year = saleDate.getFullYear();
-        const key = `${year}-${monthIndex}`;
+        const key = `${year}-${String(monthIndex).padStart(2, '0')}`; // Key like "2024-07"
         const amount = parseAmount(sale.amount);
 
         if (!monthlyTotals[key]) {
@@ -211,12 +226,11 @@ export async function getSalesDataForChart() {
             monthlyTotals[key].manual += amount;
         }
     });
-    
-    return Object.values(monthlyTotals)
-        .sort((a, b) => a.monthIndex - b.monthIndex) // Sort chronologically
-        .map(({name, online, manual}) => ({name, online, manual}));
-};
 
+    return Object.values(monthlyTotals)
+        .sort((a, b) => a.monthIndex - b.monthIndex)
+        .map(({ name, online, manual }) => ({ name, online, manual }));
+};
 
 
 export async function getDashboardCounts() {
