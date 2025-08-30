@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, MoreHorizontal, CheckCircle, XCircle, Trash2, CalendarIcon, ClockIcon, UserIcon, UsersIcon, PhoneIcon, CircleDollarSign, NotebookText } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, CheckCircle, XCircle, Trash2, CalendarIcon, ClockIcon, UsersIcon, CircleDollarSign } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
@@ -263,8 +263,8 @@ export default function ReservationsList() {
                     </div>
 
                     {/* Desktop View */}
-                    <Card className="hidden md:block">
-                        <CardContent className="p-0">
+                    <div className="hidden md:block">
+                        <Card>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -302,8 +302,8 @@ export default function ReservationsList() {
                                     ))}
                                 </TableBody>
                             </Table>
-                        </CardContent>
-                    </Card>
+                        </Card>
+                    </div>
                 </>
             )}
         </div>
