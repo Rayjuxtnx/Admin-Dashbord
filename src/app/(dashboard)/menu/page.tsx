@@ -1,39 +1,9 @@
 
-import { Button } from "@/components/ui/button";
-import { Download, QrCode as QrCodeIcon, ChevronsUpDown } from "lucide-react";
-import MenuItemCard from "@/components/MenuItemCard";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import QrCode from "@/components/QrCode";
-import { Input } from "@/components/ui/input";
-import { MenuItem } from "@/lib/menuData";
-import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { getMenuItems } from "@/app/admin/actions";
 import MenuClient from "./MenuClient";
+import { MenuItem } from "@/lib/menuData";
 
-
-const formatCategoryTitle = (title: string) => {
-    if (!title) return "Uncategorized";
-    return title
-        .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
-        .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
-        .trim();
-}
+export const dynamic = 'force-dynamic';
 
 const MenuPage = async () => {
     const menuItems = await getMenuItems();

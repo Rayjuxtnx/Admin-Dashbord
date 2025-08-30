@@ -525,7 +525,7 @@ export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem>
   // If the item has an ID, it's an update. If not, it's an insert.
   const query = item.id 
     ? supabase.from('menu_items').update(itemToUpsert).eq('id', item.id)
-    : supabase.from('menu_items').insert(itemToUpsert as any);
+    : supabase.from('menu_items').insert({ ...itemToUpsert });
   
   const { data, error } = await query
     .select()
