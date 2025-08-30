@@ -35,11 +35,6 @@ const links = [
   { href: "/admin?tab=video-gallery", label: "Video Gallery", icon: Video, tab: "video-gallery" },
 ];
 
-const secondaryLinks = [
-    { href: "/menu", label: "Public Menu", icon: Utensils },
-    { href: "/payment-confirmation", label: "Submit Till Payment", icon: SendToBack },
-]
-
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -78,24 +73,6 @@ export function AppSidebar() {
                 tooltip={link.label}
               >
                 <Link href={link.href}>
-                  <link.icon className="h-5 w-5" />
-                  <span>{link.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-        <Separator className="my-4 bg-sidebar-border" />
-         <SidebarMenu>
-          {secondaryLinks.map((link) => (
-            <SidebarMenuItem key={link.href}>
-              <SidebarMenuButton
-                asChild
-                variant="ghost"
-                isActive={isActive(undefined, link.href)}
-                tooltip={link.label}
-              >
-                <Link href={link.href} target="_blank">
                   <link.icon className="h-5 w-5" />
                   <span>{link.label}</span>
                 </Link>
