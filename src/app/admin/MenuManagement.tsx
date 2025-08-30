@@ -103,7 +103,7 @@ const MenuManagement = () => {
                         </div>
                     ): (
                     <Table>
-                        <TableHeader>
+                        <TableHeader className="hidden md:table-header-group">
                             <TableRow>
                                 <TableHead className="hidden w-[100px] sm:table-cell">Image</TableHead>
                                 <TableHead>Name</TableHead>

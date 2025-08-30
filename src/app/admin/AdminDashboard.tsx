@@ -110,7 +110,7 @@ const AdminDashboard = () => {
               {cardIsLoading ? (
                 <Skeleton className="h-8 w-1/2" />
               ) : (
-                <div className="text-2xl font-bold">{value}</div>
+                <div className="text-xl md:text-2xl font-bold">{value}</div>
               )}
               <p className="text-xs text-muted-foreground">
                   {description}
@@ -134,16 +134,18 @@ const AdminDashboard = () => {
                         <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
                     </div>
                     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-                        <div className="w-full overflow-x-auto px-4 md:px-6 lg:px-8">
-                             <TabsList className="md:w-auto">
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
-                                <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
-                                <TabWithBadge value="manual-payments" label="Manual Payments" count={counts.pendingManualPayments} isLoading={isLoading} />
-                                <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoading} />
-                                <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
-                                <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
-                            </TabsList>
+                        <div className="w-full px-4 md:px-6 lg:px-8">
+                             <div className="overflow-x-auto pb-2">
+                                <TabsList className="md:w-auto">
+                                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                                    <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
+                                    <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
+                                    <TabWithBadge value="manual-payments" label="Manual Payments" count={counts.pendingManualPayments} isLoading={isLoading} />
+                                    <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoading} />
+                                    <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
+                                    <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
+                                </TabsList>
+                             </div>
                         </div>
                         <div className="px-4 md:px-6 lg:px-8">
                             <TabsContent value="overview" className="space-y-4 mt-0">
