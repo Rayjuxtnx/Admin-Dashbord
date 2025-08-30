@@ -517,18 +517,17 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 
 export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem> {
   const supabase = createServiceRoleClient();
-  const itemToUpsert = {
+  const { id, ...itemToUpsert } = {
     ...item,
     slug: item.name?.toLowerCase().replace(/\s+/g, '-') || `item-${Date.now()}`
   };
   
-  if (itemToUpsert.id && String(itemToUpsert.id).startsWith('new-')) {
-    delete (itemToUpsert as any).id;
-  }
+  // If the item has an ID, it's an update. If not, it's an insert.
+  const query = item.id 
+    ? supabase.from('menu_items').update(itemToUpsert).eq('id', item.id)
+    : supabase.from('menu_items').insert(itemToUpsert as any);
   
-  const { data, error } = await supabase
-    .from('menu_items')
-    .upsert(itemToUpsert)
+  const { data, error } = await query
     .select()
     .single();
 
@@ -579,18 +578,17 @@ export async function getPosts(): Promise<Post[]> {
 export async function upsertPost(post: Partial<Post>): Promise<Post> {
   const supabase = createServiceRoleClient();
   
-  const postToUpsert = { 
+  const { id, ...postToUpsert } = { 
     ...post,
     slug: post.title?.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') || `post-${Date.now()}`
   };
   
-  if (postToUpsert.id && String(postToUpsert.id).startsWith('new-')) {
-    delete (postToUpsert as any).id;
-  }
-  
-  const { data, error } = await supabase
-    .from('posts')
-    .upsert(postToUpsert)
+  // If the post has an ID, it's an update. If not, it's an insert.
+  const query = post.id
+    ? supabase.from('posts').update(postToUpsert).eq('id', post.id)
+    : supabase.from('posts').insert(postToUpsert as any);
+    
+  const { data, error } = await query
     .select()
     .single();
 

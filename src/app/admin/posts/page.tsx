@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Post, usePostStore } from "@/lib/postStore";
@@ -40,7 +41,6 @@ const PostManagementPage = () => {
     
     const handleAddClick = () => {
         setSelectedPost({
-            id: `new-${Date.now()}`, // Temporary ID
             title: '',
             content: '',
             author: 'Admin',
@@ -55,18 +55,13 @@ const PostManagementPage = () => {
     const handleSaveChanges = async () => {
         if (!selectedPost) return;
 
-        const action = selectedPost.id && posts.some(post => post.id === selectedPost.id) ? 'update' : 'add';
-        
-        const postToSave: Partial<Post> = { ...selectedPost };
-        if (action === 'add') {
-            delete postToSave.id;
-        }
+        const action = selectedPost.id ? 'update' : 'add';
         
         try {
             if (action === 'update') {
-                await updatePost(postToSave as Post);
+                await updatePost(selectedPost as Post);
             } else {
-                await addPost(postToSave as Omit<Post, 'id' | 'created_at' | 'slug'>);
+                await addPost(selectedPost);
             }
             
             toast({
@@ -233,7 +228,7 @@ const PostManagementPage = () => {
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col">
                     <DialogHeader>
-                        <DialogTitle>{selectedPost?.id?.toString().startsWith('new-') ? 'Add New Post' : 'Edit Post'}</DialogTitle>
+                        <DialogTitle>{selectedPost?.id ? 'Edit Post' : 'Add New Post'}</DialogTitle>
                         <DialogDescription>Make changes to the post here. Click save when you're done.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-6 py-4 overflow-y-auto flex-grow">
@@ -293,5 +288,3 @@ const PostManagementPage = () => {
 };
 
 export default PostManagementPage;
-
-    

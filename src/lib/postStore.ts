@@ -1,4 +1,5 @@
 
+
 import { create } from 'zustand';
 import { getPosts, upsertPost, deletePost } from '@/app/admin/actions';
 
@@ -21,7 +22,7 @@ interface PostState {
   isLoading: boolean;
   error: string | null;
   fetchPosts: () => Promise<void>;
-  addPost: (post: Omit<Post, 'id' | 'created_at' | 'slug'>) => Promise<void>;
+  addPost: (post: Partial<Omit<Post, 'created_at' | 'slug'>>) => Promise<void>;
   updatePost: (post: Post) => Promise<void>;
   removePost: (id: number) => Promise<void>;
 }
