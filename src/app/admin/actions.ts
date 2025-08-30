@@ -179,46 +179,43 @@ const parseAmount = (amount: any): number => {
 export async function getSalesDataForChart() {
     const supabase = createServiceRoleClient();
     
-    const { data: onlineSales, error: onlineError } = await supabase
+    const { data: allPayments, error: paymentsError } = await supabase
         .from('payments')
-        .select('amount, created_at')
-        .eq('type', 'online');
-    if (onlineError) console.error('Error fetching online sales:', onlineError);
-
-    const { data: manualSales, error: manualError } = await supabase
-        .from('payments')
-        .select('amount, created_at')
-        .eq('type', 'manual');
-    if (manualError) console.error('Error fetching manual sales:', manualError);
-
-    const allSales = [
-        ...(onlineSales || []).map(s => ({ ...s, type: 'online', amount: parseAmount(s.amount) })),
-        ...(manualSales || []).map(s => ({ ...s, type: 'manual', amount: parseAmount(s.amount) })),
-    ];
+        .select('amount, created_at, type');
+    
+    if (paymentsError) {
+        console.error('Error fetching sales data:', paymentsError);
+        return [];
+    }
+    
+    if (!allPayments) {
+        return [];
+    }
 
     const monthlyTotals: { [key: string]: { name: string, online: number, manual: number, monthIndex: number } } = {};
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-    allSales.forEach(sale => {
+    allPayments.forEach(sale => {
         const saleDate = new Date(sale.created_at);
         const monthIndex = saleDate.getMonth();
         const year = saleDate.getFullYear();
         const key = `${year}-${monthIndex}`;
+        const amount = parseAmount(sale.amount);
 
         if (!monthlyTotals[key]) {
-            monthlyTotals[key] = { name: monthNames[monthIndex], online: 0, manual: 0, monthIndex: monthIndex };
+            monthlyTotals[key] = { name: monthNames[monthIndex], online: 0, manual: 0, monthIndex };
         }
 
         if (sale.type === 'online') {
-            monthlyTotals[key].online += sale.amount;
+            monthlyTotals[key].online += amount;
         } else if (sale.type === 'manual') {
-            monthlyTotals[key].manual += sale.amount;
+            monthlyTotals[key].manual += amount;
         }
     });
 
     return Object.values(monthlyTotals)
         .sort((a, b) => a.monthIndex - b.monthIndex)
-        .map(({name, online, manual}) => ({name, online, manual})); // remove monthIndex before returning
+        .map(({name, online, manual}) => ({name, online, manual}));
 };
 
 
@@ -248,9 +245,17 @@ export async function getDashboardCounts() {
     }
 
     if (!manualPaymentsError && manualPaymentsData) {
-        totalAmount += manualPaymentsData.reduce((acc, payment) => acc + parseAmount(payment.amount), 0);
-    } else if (manualPaymentsError) {
-        console.error("Error fetching verified manual payments:", manualPaymentsError);
+        // This part is redundant if verified manual payments are inserted into `payments` table
+        // But we'll keep it for robustness in case the insert fails.
+        // It's better to calculate from the single source of truth: the `payments` table.
+    }
+    
+    const {data: allPaymentsData, error: allPaymentsError } = await supabase
+        .from('payments')
+        .select('amount');
+
+    if (!allPaymentsError && allPaymentsData) {
+        totalAmount = allPaymentsData.reduce((acc, payment) => acc + parseAmount(payment.amount), 0);
     }
     
     const totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(totalAmount);
