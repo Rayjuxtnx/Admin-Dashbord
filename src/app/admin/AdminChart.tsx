@@ -61,12 +61,14 @@ export default function AdminChart({ data, isLoading }: AdminChartProps) {
             <ChartTooltip
                 cursor={false}
                 content={<ChartTooltipContent
-                    formatter={(value, name) => {
-                        return (
-                            <div className="flex flex-col">
-                                <span className='font-bold'>{`Ksh ${Number(value).toLocaleString()}`}</span>
-                            </div>
-                        )
+                    formatter={(value, name, props) => {
+                        if (name === "online" && props.payload?.online) {
+                             return `Ksh ${Number(props.payload.online).toLocaleString()}`;
+                        }
+                        if (name === "manual" && props.payload?.manual) {
+                            return `Ksh ${Number(props.payload.manual).toLocaleString()}`;
+                        }
+                        return null;
                     }}
                     indicator="dot" 
                 />}
@@ -87,3 +89,5 @@ export default function AdminChart({ data, isLoading }: AdminChartProps) {
     </ChartContainer>
   )
 }
+
+    

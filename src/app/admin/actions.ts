@@ -22,7 +22,7 @@ const createServiceRoleClient = () => {
 }
 
 async function ensureBucketExists(bucketName: string) {
-    const supabase = createServiceRoleClient();
+    const supabase = createServiceRolegitt();
     const { data: buckets, error } = await supabase.storage.listBuckets();
 
     if (error) {
@@ -181,65 +181,59 @@ export async function getSalesDataForChart() {
     const supabase = createServiceRoleClient();
     const { data: onlineSales, error: onlineError } = await supabase
         .from('payments')
-        .select('amount, created_at') 
+        .select('amount, created_at')
         .eq('type', 'online');
 
-    if (onlineError) {
-        console.error('Error fetching online sales data:', onlineError);
-    }
+    if (onlineError) console.error('Error fetching online sales data:', onlineError);
 
     const { data: manualSales, error: manualError } = await supabase
         .from('payments')
-        .select('amount, created_at') 
+        .select('amount, created_at')
         .eq('type', 'manual');
 
-    if (manualError) {
-        console.error('Error fetching manual sales data:', manualError);
-    }
+    if (manualError) console.error('Error fetching manual sales data:', manualError);
 
-    const onlineSalesData = (onlineSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at}));
-    const manualSalesData = (manualSales || []).map(d => ({...d, amount: parseAmount(d.amount), created_at: d.created_at}));
-
-    const monthlyTotals = [
-      { name: "Jan", online: 0, manual: 0 }, { name: "Feb", online: 0, manual: 0 },
-      { name: "Mar", online: 0, manual: 0 }, { name: "Apr", online: 0, manual: 0 },
-      { name: "May", online: 0, manual: 0 }, { name: "Jun", online: 0, manual: 0 },
-      { name: "Jul", online: 0, manual: 0 }, { name: "Aug", online: 0, manual: 0 },
-      { name: "Sep", online: 0, manual: 0 }, { name: "Oct", online: 0, manual: 0 },
-      { name: "Nov", online: 0, manual: 0 }, { name: "Dec", online: 0, manual: 0 },
+    const allSales = [
+        ...(onlineSales || []).map(s => ({ ...s, type: 'online' })),
+        ...(manualSales || []).map(s => ({ ...s, type: 'manual' })),
     ];
-
-    onlineSalesData.forEach(sale => {
-        const saleDate = new Date(sale.created_at);
-        const monthIndex = saleDate.getMonth();
-        if (monthlyTotals[monthIndex]) {
-            monthlyTotals[monthIndex].online += sale.amount;
-        }
-    });
     
-    manualSalesData.forEach(sale => {
+    const monthlyTotals: { [key: string]: { name: string, online: number, manual: number } } = {};
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    allSales.forEach(sale => {
         const saleDate = new Date(sale.created_at);
         const monthIndex = saleDate.getMonth();
-        if (monthlyTotals[monthIndex]) {
-            monthlyTotals[monthIndex].manual += sale.amount;
+        const year = saleDate.getFullYear();
+        const key = `${year}-${monthIndex}`;
+        const amount = parseAmount(sale.amount);
+
+        if (!monthlyTotals[key]) {
+            monthlyTotals[key] = { name: monthNames[monthIndex], online: 0, manual: 0 };
+        }
+
+        if (sale.type === 'online') {
+            monthlyTotals[key].online += amount;
+        } else if (sale.type === 'manual') {
+            monthlyTotals[key].manual += amount;
         }
     });
 
-    return monthlyTotals;
+    return Object.values(monthlyTotals).sort((a, b) => {
+        return monthNames.indexOf(a.name) - monthNames.indexOf(b.name);
+    });
 };
 
 
 export async function getDashboardCounts() {
     const supabase = createServiceRoleClient();
     
-    // Reservations Count
     const { count: reservationsCount, error: reservationsError } = await supabase
         .from('reservations')
         .select('*', { count: 'exact', head: true });
     
     if (reservationsError) console.error('Error fetching reservations count:', reservationsError);
     
-    // Total Revenue Calculation
     const { data: onlinePaymentsData, error: onlinePaymentsError } = await supabase
         .from('payments')
         .select('amount');
@@ -264,14 +258,12 @@ export async function getDashboardCounts() {
     
     const totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(totalAmount);
 
-    // Published Posts Count
     const { count: publishedPostsCount, error: postsError } = await supabase
         .from('posts')
         .select('*', { count: 'exact', head: true });
 
     if (postsError) console.error('Error fetching posts count:', postsError);
     
-    // Gallery Videos Count
     const { count: videosCount, error: videosError } = await supabase
         .from('gallery')
         .select('id', { count: 'exact', head: true })
@@ -280,7 +272,6 @@ export async function getDashboardCounts() {
         
     if (videosError) console.error('Error fetching videos count:', videosError);
 
-    // Pending Manual Payments Count
     const { count: pendingManualPayments, error: pendingError } = await supabase
         .from('manual_till_payments')
         .select('*', { count: 'exact', head: true })
@@ -382,7 +373,6 @@ export async function getManualConfirmations() {
 export async function updateConfirmationStatus(id: number, status: 'verified' | 'pending' | 'invalid') {
     const supabase = createServiceRoleClient();
     
-    // First, update the status in the manual_till_payments table
     const { error } = await supabase
         .from('manual_till_payments')
         .update({ status: status })
@@ -393,8 +383,6 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
         throw new Error("Could not update confirmation status.");
     }
 
-    // If the new status is 'verified', add a corresponding record to the main 'payments' table.
-    // This is for chart consistency and detailed payment tracking.
     if (status === 'verified') {
         const { data: confirmation } = await supabase
             .from('manual_till_payments')
@@ -407,20 +395,17 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
                 .from('payments')
                 .insert({
                     amount: confirmation.amount,
-                    type: 'manual', // Mark this payment as manual
+                    type: 'manual', 
                     phone_number: confirmation.customer_phone,
-                    raw_payload: confirmation, // Store the original confirmation for reference
+                    raw_payload: confirmation, 
                     mpesa_receipt_number: confirmation.mpesa_code
                 });
             if (paymentError) {
-                 // Even if this fails, the confirmation is already marked as verified, 
-                 // so we don't throw an error to the user. Log it for debugging.
                  console.error("Error inserting into payments table after verification:", paymentError);
             }
         }
     }
 
-    // Revalidate the admin path to show the changes immediately.
     revalidatePath('/admin');
 }
 
@@ -449,7 +434,6 @@ export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem>
     slug: item.name?.toLowerCase().replace(/\s+/g, '-') || `item-${Date.now()}`
   };
   
-  // This handles the case where a temporary ID is passed for a new item.
   if (itemToUpsert.id && String(itemToUpsert.id).startsWith('new-')) {
     delete (itemToUpsert as any).id;
   }
@@ -548,3 +532,5 @@ export async function deletePost(postId: number): Promise<void> {
   revalidatePath('/admin');
   return;
 }
+
+    
