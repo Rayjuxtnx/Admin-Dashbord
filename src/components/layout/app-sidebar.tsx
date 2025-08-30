@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -77,6 +78,11 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
+       <SidebarFooter>
+        <p className="text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden text-center">
+          Created by Philip Otieno Onyango
+        </p>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
