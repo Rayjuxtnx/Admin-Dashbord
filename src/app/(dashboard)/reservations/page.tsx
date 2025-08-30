@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 type PreOrderItem = {
     name: string;
@@ -77,6 +78,22 @@ export default function ReservationsList() {
 
   useEffect(() => {
     fetchData();
+
+    const channel = supabase
+      .channel('realtime reservations')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reservations' },
+        (payload) => {
+          console.log('Reservation change detected!', payload)
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [])
   
   const handleStatusUpdate = async (id: number, status: ReservationStatus) => {
@@ -86,7 +103,6 @@ export default function ReservationsList() {
             title: "Status Updated",
             description: `Reservation has been marked as ${status}.`
         });
-        fetchData(); // Refresh the list
     } catch (error) {
         toast({
             variant: "destructive",
@@ -109,7 +125,6 @@ export default function ReservationsList() {
             title: "Reservation Deleted",
             description: `The reservation for ${selectedReservation.name} has been deleted.`
         });
-        fetchData(); // Refresh the list
         setIsDeleteDialogOpen(false);
         setSelectedReservation(null);
     } catch (error) {
@@ -149,7 +164,7 @@ export default function ReservationsList() {
   const reservationDetails = (res: Reservation) => (
      <Collapsible>
         <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="flex items-center text-sm text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" className="flex items-center text-sm text-muted-foreground hover:text-foreground -ml-4">
                 View Details <ChevronDown className="h-4 w-4 ml-1" />
             </Button>
         </CollapsibleTrigger>
@@ -270,7 +285,10 @@ export default function ReservationsList() {
                                         <TableCell>{res.phone}</TableCell>
                                         <TableCell className="text-center">{res.guests}</TableCell>
                                         <TableCell>
-                                        {formatDate(res.reservation_date)} @ {res.reservation_time}
+                                            <div className="flex flex-col">
+                                                <span>{formatDate(res.reservation_date)}</span>
+                                                <span className="text-xs text-muted-foreground">{res.reservation_time}</span>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-center">{formatStatus(res.payment_status)}</TableCell>
                                         <TableCell className="text-right">Ksh {res.pre_order_total.toLocaleString()}</TableCell>

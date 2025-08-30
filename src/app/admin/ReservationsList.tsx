@@ -2,14 +2,14 @@
 "use client"
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getReservations, updateReservationStatus, deleteReservation } from './actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, MoreHorizontal, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, CheckCircle, XCircle, Trash2, CalendarIcon, ClockIcon, UsersIcon, CircleDollarSign } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
@@ -134,6 +134,56 @@ export default function ReservationsList() {
         });
     }
   }
+  
+  const reservationActions = (res: Reservation) => (
+    <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button aria-haspopup="true" size="icon" variant="ghost">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Toggle menu</span>
+            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => handleStatusUpdate(res.id, 'paid')}>
+                <CheckCircle className="mr-2 h-4 w-4" /> Confirm Payment
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => handleStatusUpdate(res.id, 'cancelled')}>
+                <XCircle className="mr-2 h-4 w-4" /> Cancel Reservation
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => handleDeleteClick(res)} className="text-destructive focus:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Permanently
+            </DropdownMenuItem>
+        </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const reservationDetails = (res: Reservation) => (
+     <Collapsible>
+        <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="flex items-center text-sm text-muted-foreground hover:text-foreground -ml-4">
+                View Details <ChevronDown className="h-4 w-4 ml-1" />
+            </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+        <div className="p-2 mt-2 bg-muted rounded-md text-xs space-y-2">
+            <p><strong>Requests:</strong> {res.special_requests || 'None'}</p>
+            {res.pre_ordered_items && res.pre_ordered_items.length > 0 && (
+                <div>
+                    <strong>Pre-orders:</strong>
+                    <ul className="list-disc pl-4">
+                        {res.pre_ordered_items.map((item, index) => (
+                            <li key={index}>{item.name} ({item.price})</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+        </CollapsibleContent>
+    </Collapsible>
+  )
 
 
   if(isLoading) {
@@ -154,9 +204,9 @@ export default function ReservationsList() {
             </CardHeader>
             <CardContent>
             <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full" />
             </div>
             </CardContent>
         </Card>
@@ -175,90 +225,86 @@ export default function ReservationsList() {
                     Manage all customer reservations and pre-orders.
                 </p>
             </header>
-            <Card>
-                <CardContent className="p-0">
-                    {reservations.length === 0 ? (
-                         <p className="text-muted-foreground text-center py-8">No reservations have been made yet.</p>
-                    ) : (
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead className="text-center">Guests</TableHead>
-                            <TableHead>Date & Time</TableHead>
-                            <TableHead className="text-center">Payment</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                            <TableHead>Details</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {reservations.map((res) => (
-                            <TableRow key={res.id}>
-                                <TableCell className="font-medium">{res.name}</TableCell>
-                                <TableCell>{res.phone}</TableCell>
-                                <TableCell className="text-center">{res.guests}</TableCell>
-                                <TableCell>
-                                {formatDate(res.reservation_date)} @ {res.reservation_time}
-                                </TableCell>
-                                <TableCell className="text-center">{formatStatus(res.payment_status)}</TableCell>
-                                <TableCell className="text-right">Ksh {res.pre_order_total.toLocaleString()}</TableCell>
-                                <TableCell>
-                                <Collapsible>
-                                    <CollapsibleTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="flex items-center text-sm text-muted-foreground hover:text-foreground">
-                                            View <ChevronDown className="h-4 w-4 ml-1" />
-                                        </Button>
-                                    </CollapsibleTrigger>
-                                    <CollapsibleContent>
-                                    <div className="p-2 mt-2 bg-muted rounded-md text-xs space-y-2">
-                                        <p><strong>Requests:</strong> {res.special_requests || 'None'}</p>
-                                        {res.pre_ordered_items && res.pre_ordered_items.length > 0 && (
-                                            <div>
-                                                <strong>Pre-orders:</strong>
-                                                <ul className="list-disc pl-4">
-                                                    {res.pre_ordered_items.map((item, index) => (
-                                                        <li key={index}>{item.name} ({item.price})</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
+            
+             {reservations.length === 0 ? (
+                 <Card>
+                    <CardContent>
+                        <p className="text-muted-foreground text-center py-8">No reservations have been made yet.</p>
+                    </CardContent>
+                 </Card>
+            ) : (
+                <>
+                    {/* Mobile View */}
+                    <div className="grid gap-4 md:hidden">
+                        {reservations.map(res => (
+                             <Card key={res.id}>
+                                <CardHeader>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <CardTitle className="text-lg">{res.name}</CardTitle>
+                                            <CardDescription>{res.phone}</CardDescription>
+                                        </div>
+                                        {reservationActions(res)}
                                     </div>
-                                    </CollapsibleContent>
-                                </Collapsible>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">Toggle menu</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onSelect={() => handleStatusUpdate(res.id, 'paid')}>
-                                                <CheckCircle className="mr-2 h-4 w-4" /> Confirm Payment
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => handleStatusUpdate(res.id, 'cancelled')}>
-                                                <XCircle className="mr-2 h-4 w-4" /> Cancel Reservation
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onSelect={() => handleDeleteClick(res)} className="text-destructive focus:text-destructive">
-                                                <Trash2 className="mr-2 h-4 w-4" /> Delete Permanently
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                            ))}
-                        </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
+                                </CardHeader>
+                                <CardContent className="space-y-3 text-sm">
+                                    <div className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" /> <span>{formatDate(res.reservation_date)}</span></div>
+                                    <div className="flex items-center gap-2"><ClockIcon className="h-4 w-4 text-muted-foreground" /> <span>{res.reservation_time}</span></div>
+                                    <div className="flex items-center gap-2"><UsersIcon className="h-4 w-4 text-muted-foreground" /> <span>{res.guests} Guests</span></div>
+                                    <div className="flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-muted-foreground" /> <span>Ksh {res.pre_order_total.toLocaleString()}</span></div>
+                                    <div className="flex items-center gap-2">{formatStatus(res.payment_status)}</div>
+                                </CardContent>
+                                <CardFooter className="flex justify-start">
+                                    {reservationDetails(res)}
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Desktop View */}
+                    <Card className="hidden md:block">
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Contact</TableHead>
+                                    <TableHead className="text-center">Guests</TableHead>
+                                    <TableHead>Date & Time</TableHead>
+                                    <TableHead className="text-center">Payment</TableHead>
+                                    <TableHead className="text-right">Total</TableHead>
+                                    <TableHead>Details</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {reservations.map((res) => (
+                                    <TableRow key={res.id}>
+                                        <TableCell className="font-medium">{res.name}</TableCell>
+                                        <TableCell>{res.phone}</TableCell>
+                                        <TableCell className="text-center">{res.guests}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <span>{formatDate(res.reservation_date)}</span>
+                                                <span className="text-xs text-muted-foreground">{res.reservation_time}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">{formatStatus(res.payment_status)}</TableCell>
+                                        <TableCell className="text-right">Ksh {res.pre_order_total.toLocaleString()}</TableCell>
+                                        <TableCell>
+                                            {reservationDetails(res)}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {reservationActions(res)}
+                                        </TableCell>
+                                    </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </>
+            )}
         </div>
 
 
