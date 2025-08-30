@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   BookCopy,
   LayoutGrid,
@@ -25,17 +25,27 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 const links = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/reservations", label: "Reservations", icon: BookCopy },
-  { href: "/admin/manual-payments", label: "Manual Payments", icon: Landmark },
-  { href: "/admin/blogs", label: "Blog", icon: Newspaper },
-  { href: "/admin/menu", label: "Public Menu", icon: Utensils },
-  { href: "/admin/homepage-media", label: "Homepage Media", icon: ImageIcon },
-  { href: "/admin/video-gallery", label: "Video Gallery", icon: Video },
+  { href: "/admin?tab=overview", label: "Overview", icon: LayoutDashboard, tab: "overview" },
+  { href: "/admin?tab=reservations", label: "Reservations", icon: BookCopy, tab: "reservations" },
+  { href: "/admin?tab=manual-payments", label: "Manual Payments", icon: Landmark, tab: "manual-payments" },
+  { href: "/admin?tab=blog", label: "Blog", icon: Newspaper, tab: "blog" },
+  { href: "/admin/menu", label: "Public Menu", icon: Utensils, tab: "public-menu" },
+  { href: "/admin?tab=homepage-media", label: "Homepage Media", icon: ImageIcon, tab: "homepage-media" },
+  { href: "/admin?tab=video-gallery", label: "Video Gallery", icon: Video, tab: "video-gallery" },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab');
+
+  const isActive = (tab: string, href: string) => {
+    if (href.startsWith('/admin?tab=')) {
+        return currentTab === tab && pathname === '/admin';
+    }
+    return pathname === href;
+  }
+
 
   return (
     <Sidebar>
@@ -56,7 +66,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={link.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === link.href}
+                isActive={isActive(link.tab, link.href)}
                 tooltip={link.label}
               >
                 <Link href={link.href}>

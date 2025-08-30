@@ -99,7 +99,7 @@ export default function ManualConfirmationsList() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Manual Payment Confirmations</CardTitle>
+          <CardTitle>Incoming Confirmations</CardTitle>
           <CardDescription>Review and verify payments submitted manually by customers using the M-Pesa Till.</CardDescription>
         </CardHeader>
         <CardContent>

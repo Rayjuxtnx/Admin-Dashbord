@@ -19,10 +19,14 @@ import BlogManagementPage from "./blogs/page";
 import HomepageMediaPage from "./homepage-media/page";
 import VideoGalleryPage from "./video-gallery/page";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { useSearchParams } from "next/navigation";
 
 
 const AdminDashboardPage = () => {
     const { toast } = useToast();
+    const searchParams = useSearchParams();
+    const initialTab = searchParams.get('tab') || 'overview';
+    
     const [isClient, setIsClient] = useState(false);
     const [counts, setCounts] = useState({
       reservationsCount: 0,
@@ -63,7 +67,17 @@ const AdminDashboardPage = () => {
     }, [toast, fetchMenuItems]);
 
     if (!isClient) {
-      return null;
+      return (
+        <DashboardLayout>
+            <div className="flex-1 space-y-4 p-8 pt-6">
+                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-12 w-full" />
+                <div className="space-y-4">
+                    <Skeleton className="h-64 w-full" />
+                </div>
+            </div>
+        </DashboardLayout>
+      );
     }
 
     const StatCard = ({ title, value, icon: Icon, description, isLoading }: { title: string, value: string | number, icon: React.ElementType, description: string, isLoading: boolean}) => (
@@ -92,7 +106,7 @@ const AdminDashboardPage = () => {
                     <div className="flex items-center justify-between space-y-2">
                         <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
                     </div>
-                    <Tabs defaultValue="overview" className="space-y-4">
+                    <Tabs defaultValue={initialTab} className="space-y-4">
                         <TabsList>
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             <TabsTrigger value="menu-management">Menu Management</TabsTrigger>
