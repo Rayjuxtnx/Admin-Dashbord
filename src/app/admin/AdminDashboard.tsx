@@ -135,7 +135,7 @@ const AdminDashboard = () => {
                     </div>
                     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
                         <div className="w-full overflow-x-auto px-4 md:px-6 lg:px-8">
-                             <TabsList className="h-auto md:flex-wrap md:h-10 md:w-auto">
+                             <TabsList className="md:w-auto">
                                 <TabsTrigger value="overview">Overview</TabsTrigger>
                                 <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
                                 <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
