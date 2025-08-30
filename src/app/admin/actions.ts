@@ -210,6 +210,8 @@ export async function getSalesDataForChart() {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     allSales.forEach(sale => {
+        if (!sale.created_at) return; // Skip records without a date
+
         const saleDate = new Date(sale.created_at);
         const monthIndex = saleDate.getMonth();
         const year = saleDate.getFullYear();
