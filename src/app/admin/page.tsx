@@ -13,9 +13,9 @@ import { getDashboardCounts } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
 import { Skeleton } from "@/components/ui/skeleton";
-import ReservationsList from "./ReservationsList";
+import ReservationsList from "../(dashboard)/reservations/page";
 import ManualConfirmationsList from "./ManualConfirmationsList";
-import BlogManagementPage from "./blogs/page";
+import PostManagementPage from "./posts/page";
 import HomepageMediaPage from "./homepage-media/page";
 import VideoGalleryPage from "./video-gallery/page";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -31,7 +31,7 @@ const AdminDashboardPage = () => {
     const [counts, setCounts] = useState({
       reservationsCount: 0,
       totalRevenue: 'Ksh 0',
-      publishedBlogsCount: 0,
+      publishedPostsCount: 0,
       videosCount: 0,
     });
     const [isLoadingCounts, setIsLoadingCounts] = useState(true);
@@ -43,11 +43,11 @@ const AdminDashboardPage = () => {
       const fetchInitialData = async () => {
         setIsLoadingCounts(true);
         try {
-            const { reservationsCount, totalRevenue, publishedBlogsCount, videosCount } = await getDashboardCounts();
+            const { reservationsCount, totalRevenue, publishedPostsCount, videosCount } = await getDashboardCounts();
             setCounts({
               reservationsCount,
               totalRevenue,
-              publishedBlogsCount,
+              publishedPostsCount,
               videosCount
             })
         } catch (error) {
@@ -112,7 +112,7 @@ const AdminDashboardPage = () => {
                             <TabsTrigger value="menu-management">Menu Management</TabsTrigger>
                             <TabsTrigger value="reservations">Reservations</TabsTrigger>
                             <TabsTrigger value="manual-payments">Manual Payments</TabsTrigger>
-                            <TabsTrigger value="blog">Blog</TabsTrigger>
+                            <TabsTrigger value="posts">Posts</TabsTrigger>
                             <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
                             <TabsTrigger value="video-gallery">Video Gallery</TabsTrigger>
                             <TabsTrigger asChild><Link href="/menu">Public Menu</Link></TabsTrigger>
@@ -141,8 +141,8 @@ const AdminDashboardPage = () => {
                                     isLoading={menuLoading}
                                 />
                                 <StatCard 
-                                    title="Published Blogs"
-                                    value={`+${counts.publishedBlogsCount}`}
+                                    title="Published Posts"
+                                    value={`+${counts.publishedPostsCount}`}
                                     icon={Newspaper}
                                     description="posts on the blog page"
                                     isLoading={isLoadingCounts}
@@ -177,8 +177,8 @@ const AdminDashboardPage = () => {
                         <TabsContent value="manual-payments" className="space-y-4">
                             <ManualConfirmationsList />
                         </TabsContent>
-                        <TabsContent value="blog" className="space-y-4">
-                            <BlogManagementPage />
+                        <TabsContent value="posts" className="space-y-4">
+                            <PostManagementPage />
                         </TabsContent>
                         <TabsContent value="homepage-media" className="space-y-4">
                             <HomepageMediaPage />

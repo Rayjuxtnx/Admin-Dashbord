@@ -1,12 +1,12 @@
 
 "use client";
 
-import { BlogPost, useBlogStore } from "@/lib/blogStore";
+import { Post, usePostStore } from "@/lib/postStore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, PlusCircle, CheckCircle, XCircle } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -14,28 +14,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 
-const BlogManagementPage = () => {
+const PostManagementPage = () => {
     const { toast } = useToast();
-    const { blogPosts, isLoading, error, fetchBlogPosts, addBlogPost, updateBlogPost, removeBlogPost } = useBlogStore();
+    const { posts, isLoading, error, fetchPosts, addPost, updatePost, removePost } = usePostStore();
     
-    const [selectedPost, setSelectedPost] = useState<Partial<BlogPost> | null>(null);
+    const [selectedPost, setSelectedPost] = useState<Partial<Post> | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     useEffect(() => {
-        fetchBlogPosts();
-    }, [fetchBlogPosts]);
+        fetchPosts();
+    }, [fetchPosts]);
 
-    const handleEditClick = (post: BlogPost) => {
+    const handleEditClick = (post: Post) => {
         setSelectedPost({...post});
         setIsEditDialogOpen(true);
     };
 
-    const handleDeleteClick = (post: BlogPost) => {
+    const handleDeleteClick = (post: Post) => {
         setSelectedPost(post);
         setIsDeleteDialogOpen(true);
     };
@@ -45,7 +43,11 @@ const BlogManagementPage = () => {
             id: `new-${Date.now()}`, // Temporary ID
             title: '',
             content: '',
-            published: false,
+            author: 'Admin',
+            date: new Date().toISOString(),
+            excerpt: '',
+            image_url: '',
+            image_hint: '',
         });
         setIsEditDialogOpen(true);
     }
@@ -53,18 +55,18 @@ const BlogManagementPage = () => {
     const handleSaveChanges = async () => {
         if (!selectedPost) return;
 
-        const action = selectedPost.id && blogPosts.some(post => post.id === selectedPost.id) ? 'update' : 'add';
+        const action = selectedPost.id && posts.some(post => post.id === selectedPost.id) ? 'update' : 'add';
         
-        const postToSave: Partial<BlogPost> = { ...selectedPost };
+        const postToSave: Partial<Post> = { ...selectedPost };
         if (action === 'add') {
             delete postToSave.id;
         }
         
         try {
             if (action === 'update') {
-                await updateBlogPost(postToSave as BlogPost);
+                await updatePost(postToSave as Post);
             } else {
-                await addBlogPost(postToSave as Omit<BlogPost, 'id' | 'created_at'>);
+                await addPost(postToSave as Omit<Post, 'id' | 'created_at' | 'slug'>);
             }
             
             toast({
@@ -86,7 +88,7 @@ const BlogManagementPage = () => {
         if (!selectedPost || !selectedPost.id) return;
 
         try {
-            await removeBlogPost(Number(selectedPost.id));
+            await removePost(Number(selectedPost.id));
             toast({
                 title: "Post Deleted",
                 description: `"${selectedPost.title}" has been removed.`,
@@ -101,22 +103,31 @@ const BlogManagementPage = () => {
             });
         }
     };
+    
+    const formatDate = (dateString: string) => {
+        try {
+            return format(new Date(dateString), "PP");
+        } catch (e) {
+            return "Invalid Date";
+        }
+    }
+
 
     return (
         <div className="flex flex-col gap-8">
              <header>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">
-                    Blog Management
+                    Post Management
                 </h1>
                 <p className="text-muted-foreground">
-                    Create, edit, and manage all your blog posts.
+                    Create, edit, and manage all your posts.
                 </p>
             </header>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle>Blog Posts</CardTitle>
-                        <CardDescription>Manage your blog content. Published posts will appear on your public blog page.</CardDescription>
+                        <CardTitle>Posts</CardTitle>
+                        <CardDescription>Manage your site's content. Posts will appear on your public blog page.</CardDescription>
                     </div>
                      <Button onClick={handleAddClick}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -133,30 +144,26 @@ const BlogManagementPage = () => {
                     ) : error ? (
                         <div className="text-center py-8">
                             <p className="text-destructive">{error}</p>
-                            <Button onClick={() => fetchBlogPosts()} className="mt-4">Try Again</Button>
+                            <Button onClick={() => fetchPosts()} className="mt-4">Try Again</Button>
                         </div>
                     ): (
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Title</TableHead>
-                                <TableHead>Created At</TableHead>
-                                <TableHead className="text-center">Published</TableHead>
-                                <TableHead>
+                                <TableHead>Author</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead className="text-right">
                                     <span className="sr-only">Actions</span>
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {blogPosts.map((post) => (
+                            {posts.map((post) => (
                                 <TableRow key={post.id}>
                                     <TableCell className="font-medium">{post.title}</TableCell>
-                                    <TableCell>{format(new Date(post.created_at), "PPp")}</TableCell>
-                                    <TableCell className="text-center">
-                                        {post.published ? 
-                                            <Badge className="bg-green-100 text-green-800"><CheckCircle className="mr-1 h-3 w-3" /> Published</Badge> : 
-                                            <Badge variant="outline"><XCircle className="mr-1 h-3 w-3"/> Draft</Badge>}
-                                    </TableCell>
+                                    <TableCell>{post.author}</TableCell>
+                                    <TableCell>{formatDate(post.date)}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -187,25 +194,38 @@ const BlogManagementPage = () => {
 
             {/* Edit/Add Post Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-2xl">
+                <DialogContent className="sm:max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>{selectedPost?.id?.toString().startsWith('new-') ? 'Add New Post' : 'Edit Post'}</DialogTitle>
-                        <DialogDescription>Make changes to the blog post here. Click save when you're done.</DialogDescription>
+                        <DialogDescription>Make changes to the post here. Click save when you're done.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="title" className="text-right">Title</Label>
-                            <Input id="title" value={selectedPost?.title || ''} onChange={(e) => setSelectedPost(prev => prev ? {...prev, title: e.target.value} : null)} className="col-span-3" />
+                    <div className="grid gap-6 py-4">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                             <div className="space-y-2">
+                                <Label htmlFor="title">Title</Label>
+                                <Input id="title" value={selectedPost?.title || ''} onChange={(e) => setSelectedPost(prev => prev ? {...prev, title: e.target.value} : null)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="author">Author</Label>
+                                <Input id="author" value={selectedPost?.author || ''} onChange={(e) => setSelectedPost(prev => prev ? {...prev, author: e.target.value} : null)} />
+                            </div>
                         </div>
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label htmlFor="content" className="text-right pt-2">Content</Label>
-                            <Textarea id="content" value={selectedPost?.content || ''} onChange={(e) => setSelectedPost(prev => prev ? {...prev, content: e.target.value} : null)} className="col-span-3 min-h-[200px]" placeholder="Write your blog post content here..."/>
+                        <div className="space-y-2">
+                            <Label htmlFor="content">Content</Label>
+                            <Textarea id="content" value={selectedPost?.content || ''} onChange={(e) => setSelectedPost(prev => prev ? {...prev, content: e.target.value} : null)} className="min-h-[250px]" placeholder="Write your post content here..."/>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="published" className="text-right">Published</Label>
-                            <div className="col-span-3 flex items-center gap-2">
-                                <Switch id="published" checked={selectedPost?.published || false} onCheckedChange={(checked) => setSelectedPost(prev => prev ? {...prev, published: checked} : null)} />
-                                <span className="text-sm text-muted-foreground">{selectedPost?.published ? "This post will be visible to the public." : "This post is a draft."}</span>
+                        <div className="space-y-2">
+                            <Label htmlFor="excerpt">Excerpt</Label>
+                            <Textarea id="excerpt" value={selectedPost?.excerpt || ''} onChange={(e) => setSelectedPost(prev => prev ? {...prev, excerpt: e.target.value} : null)} className="min-h-[100px]" placeholder="A short summary of the post."/>
+                        </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="image_url">Image URL</Label>
+                                <Input id="image_url" value={selectedPost?.image_url || ''} onChange={(e) => setSelectedPost(prev => prev ? {...prev, image_url: e.target.value} : null)} placeholder="https://example.com/image.png"/>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="image_hint">Image Hint</Label>
+                                <Input id="image_hint" value={selectedPost?.image_hint || ''} onChange={(e) => setSelectedPost(prev => prev ? {...prev, image_hint: e.target.value} : null)} placeholder="e.g. food delicious"/>
                             </div>
                         </div>
                     </div>
@@ -235,4 +255,4 @@ const BlogManagementPage = () => {
     );
 };
 
-export default BlogManagementPage;
+export default PostManagementPage;

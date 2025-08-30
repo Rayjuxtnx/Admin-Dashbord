@@ -5,7 +5,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from "next/cache";
 import type { MenuItem } from '@/lib/menuData';
-import type { BlogPost } from '@/lib/blogStore';
+import type { Post } from '@/lib/postStore';
 
 // Note: use the service role key to bypass RLS
 const createServiceRoleClient = () => {
@@ -230,13 +230,12 @@ export async function getDashboardCounts() {
         console.error("Error fetching payments:", paymentsError);
     }
 
-    const { count: publishedBlogsCount, error: blogsError } = await supabase
-        .from('blogs')
-        .select('*', { count: 'exact', head: true })
-        .eq('published', true);
+    const { count: publishedPostsCount, error: postsError } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true });
 
-    if (blogsError) {
-        console.error('Error fetching blogs count:', blogsError);
+    if (postsError) {
+        console.error('Error fetching posts count:', postsError);
     }
     
     const { count: videosCount, error: videosError } = await supabase
@@ -253,7 +252,7 @@ export async function getDashboardCounts() {
     return {
         reservationsCount: reservationsCount ?? 0,
         totalRevenue,
-        publishedBlogsCount: publishedBlogsCount ?? 0,
+        publishedPostsCount: publishedPostsCount ?? 0,
         videosCount: videosCount ?? 0,
     };
 }
@@ -447,57 +446,64 @@ export async function deleteMenuItem(itemId: string) {
   return;
 }
 
-export async function getBlogPosts(): Promise<BlogPost[]> {
+export async function getPosts(): Promise<Post[]> {
     const supabase = createServiceRoleClient();
     const { data, error } = await supabase
-        .from('blogs')
+        .from('posts')
         .select('*')
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error("Error fetching blog posts:", error);
-        throw new Error("Failed to fetch blog posts.");
+        console.error("Error fetching posts:", error);
+        if (error.message.includes("does not exist")) {
+             throw new Error("The 'posts' table does not exist in your database. Please create it first in the Supabase dashboard.");
+        }
+        throw new Error("Failed to fetch posts.");
     }
-    return data as BlogPost[];
+    return data as Post[];
 };
 
-export async function upsertBlogPost(post: Partial<BlogPost>): Promise<BlogPost> {
+export async function upsertPost(post: Partial<Post>): Promise<Post> {
   const supabase = createServiceRoleClient();
-  const postToUpsert = { ...post };
+  
+  const postToUpsert = { 
+    ...post,
+    slug: post.title?.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') || `post-${Date.now()}`
+  };
   
   if (postToUpsert.id && String(postToUpsert.id).startsWith('new-')) {
     delete (postToUpsert as any).id;
   }
   
   const { data, error } = await supabase
-    .from('blogs')
+    .from('posts')
     .upsert(postToUpsert)
     .select()
     .single();
 
   if (error) {
-    console.error("Error upserting blog post:", error);
-    throw new Error(`Failed to save blog post. Reason: ${error.message}`);
+    console.error("Error upserting post:", error);
+    throw new Error(`Failed to save post. Reason: ${error.message}`);
   }
 
-  revalidatePath('/blogs');
+  revalidatePath('/posts'); // Assuming you'll have a public posts page
   revalidatePath('/admin');
-  return data as BlogPost;
+  return data as Post;
 }
 
-export async function deleteBlogPost(postId: number): Promise<void> {
+export async function deletePost(postId: number): Promise<void> {
   const supabase = createServiceRoleClient();
   const { error } = await supabase
-    .from('blogs')
+    .from('posts')
     .delete()
     .eq('id', postId);
 
   if (error) {
-    console.error("Error deleting blog post:", error);
-    throw new Error("Failed to delete blog post.");
+    console.error("Error deleting post:", error);
+    throw new Error("Failed to delete post.");
   }
   
-  revalidatePath('/blogs');
+  revalidatePath('/posts');
   revalidatePath('/admin');
   return;
 }
