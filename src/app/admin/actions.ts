@@ -2,10 +2,24 @@
 'use server'
 
 import 'dotenv/config';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from "next/cache";
 import type { MenuItem } from '@/lib/menuData';
 import type { BlogPost } from '@/lib/blogStore';
+
+// Note: use the service role key to bypass RLS
+const createServiceRoleClient = () => {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+            }
+        }
+    );
+}
 
 async function ensureBucketExists(bucketName: string) {
     const supabase = createServiceRoleClient();
@@ -137,6 +151,7 @@ export async function deleteGalleryMedia(id: number, path: string) {
     revalidatePath('/gallery');
     revalidatePath('/video-gallery');
     revalidatePath('/homepage-media');
+    revalidatePath('/admin');
 }
 
 export async function getRecentPayments() {
@@ -268,7 +283,7 @@ export async function updateReservationStatus(id: number, status: 'paid' | 'pend
         console.error("Error updating reservation status:", error);
         throw new Error("Could not update reservation status.");
     }
-    revalidatePath('/reservations');
+    revalidatePath('/admin');
 }
 
 export async function deleteReservation(id: number) {
@@ -282,7 +297,7 @@ export async function deleteReservation(id: number) {
         console.error("Error deleting reservation:", error);
         throw new Error("Could not delete reservation.");
     }
-    revalidatePath('/reservations');
+    revalidatePath('/admin');
 }
 
 export async function submitManualPaymentConfirmation(formData: { name: string; phone: string; mpesaCode: string; amount: number; paymentTime: string; }) {
@@ -306,7 +321,7 @@ export async function submitManualPaymentConfirmation(formData: { name: string; 
         throw new Error("Could not submit your payment confirmation. Please try again.");
     }
     revalidatePath('/payment-confirmation');
-    revalidatePath('/manual-payments');
+    revalidatePath('/admin');
     return data;
 }
 
@@ -335,7 +350,31 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
         console.error("Error updating confirmation status:", error);
         throw new Error("Could not update confirmation status.");
     }
-    revalidatePath('/manual-payments');
+
+    if (status === 'verified') {
+        const { data: confirmation } = await supabase
+            .from('manual_confirmations')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (confirmation) {
+             const { error: paymentError } = await supabase
+                .from('payments')
+                .insert({
+                    amount: confirmation.amount,
+                    type: 'manual',
+                    phone_number: confirmation.customer_phone,
+                    raw_payload: confirmation,
+                });
+            if (paymentError) {
+                 console.error("Error inserting into payments table after verification:", paymentError);
+            }
+        }
+    }
+
+
+    revalidatePath('/admin');
 }
 
 
@@ -378,8 +417,8 @@ export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem>
     throw new Error(`Failed to save menu item. Reason: ${error.message}`);
   }
 
-  revalidatePath('/');
   revalidatePath('/menu');
+  revalidatePath('/admin');
   return data as MenuItem;
 }
 
@@ -395,8 +434,8 @@ export async function deleteMenuItem(itemId: string) {
     throw new Error("Failed to delete menu item.");
   }
   
-  revalidatePath('/');
   revalidatePath('/menu');
+  revalidatePath('/admin');
   return;
 }
 
@@ -434,6 +473,7 @@ export async function upsertBlogPost(post: Partial<BlogPost>): Promise<BlogPost>
   }
 
   revalidatePath('/blogs');
+  revalidatePath('/admin');
   return data as BlogPost;
 }
 
@@ -450,5 +490,6 @@ export async function deleteBlogPost(postId: number): Promise<void> {
   }
   
   revalidatePath('/blogs');
+  revalidatePath('/admin');
   return;
 }

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Image as ImageIcon, PlusCircle } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -16,17 +16,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMenuStore } from "@/lib/menuStore";
 import { Skeleton } from "@/components/ui/skeleton";
+import AddMenuItemForm from "./AddMenuItemForm";
 
 const MenuManagement = () => {
     const { toast } = useToast();
-    const { menuItems, isLoading, error, fetchMenuItems, addMenuItem, updateMenuItem, removeMenuItem } = useMenuStore();
+    const { menuItems, isLoading, error, fetchMenuItems, updateMenuItem, removeMenuItem } = useMenuStore();
     
     const [selectedItem, setSelectedItem] = useState<Partial<MenuItem> | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     useEffect(() => {
-        // Fetch menu items when the component mounts
         fetchMenuItems();
     }, [fetchMenuItems]);
 
@@ -39,37 +39,14 @@ const MenuManagement = () => {
         setSelectedItem(item);
         setIsDeleteDialogOpen(true);
     };
-    
-    const handleAddClick = () => {
-        setSelectedItem({
-            id: `new-${Date.now()}`, // Temporary ID
-            slug: '',
-            name: '',
-            price: '',
-            description: '',
-            image: `https://picsum.photos/200/200?random=${Math.random()}`,
-            category: 'Uncategorized'
-        });
-        setIsEditDialogOpen(true);
-    }
 
     const handleSaveChanges = async () => {
         if (!selectedItem) return;
-
-        const action = selectedItem.id && menuItems.some(item => item.id === selectedItem.id) ? 'update' : 'add';
         
-        // Remove temporary ID before saving a new item
-        const itemToSave = { ...selectedItem };
-        if (action === 'add') {
-            delete itemToSave.id;
-        }
-        
-        const promise = action === 'update' ? updateMenuItem(itemToSave as MenuItem) : addMenuItem(itemToSave as Omit<MenuItem, 'id' | 'slug'>);
-
         try {
-            await promise;
+            await updateMenuItem(selectedItem as MenuItem)
             toast({
-                title: `Item ${action === 'update' ? 'Updated' : 'Added'}`,
+                title: `Item Updated`,
                 description: `${selectedItem.name} has been successfully saved.`,
             });
             setIsEditDialogOpen(false);
@@ -77,7 +54,7 @@ const MenuManagement = () => {
         } catch (e: any) {
             toast({
                 variant: 'destructive',
-                title: `Failed to ${action} item`,
+                title: `Failed to update item`,
                 description: e.message || 'An error occurred.',
             });
         }
@@ -104,17 +81,13 @@ const MenuManagement = () => {
     };
 
     return (
-        <>
+        <div className="space-y-8">
+            <AddMenuItemForm />
+            
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Menu Items</CardTitle>
-                        <CardDescription>Manage your restaurant's menu. Changes will be saved to the database.</CardDescription>
-                    </div>
-                     <Button onClick={handleAddClick}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add New Item
-                    </Button>
+                <CardHeader>
+                    <CardTitle>Existing Menu Items</CardTitle>
+                    <CardDescription>Manage your restaurant's menu. Changes will be saved to the database.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -187,11 +160,11 @@ const MenuManagement = () => {
                 </CardContent>
             </Card>
 
-            {/* Edit/Add Item Dialog */}
+            {/* Edit Item Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{selectedItem?.id?.toString().startsWith('new-') ? 'Add' : 'Edit'}: {selectedItem?.name || 'New Item'}</DialogTitle>
+                        <DialogTitle>Edit: {selectedItem?.name || 'Item'}</DialogTitle>
                         <DialogDescription>Make changes to this menu item. Click save when you're done.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -238,7 +211,7 @@ const MenuManagement = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </>
+        </div>
     );
 };
 

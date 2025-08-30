@@ -1,8 +1,9 @@
+
 "use client"
 
 import { useEffect, useState, useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { getSalesDataForChart } from '@/app/(dashboard)/actions';
+import { getSalesDataForChart } from '@/app/admin/actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 

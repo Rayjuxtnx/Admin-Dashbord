@@ -4,8 +4,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PlusCircle, Trash2, Loader2 } from "lucide-react";
-import { getGalleryMedia, deleteGalleryMedia, uploadMedia } from "../actions";
+import { Trash2 } from "lucide-react";
+import { getGalleryMedia, deleteGalleryMedia } from "../actions";
 import { useToast } from "@/hooks/use-toast";
 import { GalleryMedia } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";

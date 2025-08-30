@@ -25,13 +25,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 const links = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/reservations", label: "Reservations", icon: BookCopy },
-  { href: "/manual-payments", label: "Manual Payments", icon: Landmark },
-  { href: "/blogs", label: "Blog", icon: Newspaper },
-  { href: "/menu", label: "Public Menu", icon: Utensils },
-  { href: "/homepage-media", label: "Homepage Media", icon: ImageIcon },
-  { href: "/video-gallery", label: "Video Gallery", icon: Video },
+  { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/reservations", label: "Reservations", icon: BookCopy },
+  { href: "/admin/manual-payments", label: "Manual Payments", icon: Landmark },
+  { href: "/admin/blogs", label: "Blog", icon: Newspaper },
+  { href: "/admin/menu", label: "Public Menu", icon: Utensils },
+  { href: "/admin/homepage-media", label: "Homepage Media", icon: ImageIcon },
+  { href: "/admin/video-gallery", label: "Video Gallery", icon: Video },
 ];
 
 export function AppSidebar() {
@@ -40,7 +40,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-2 p-2">
+        <Link href="/admin" className="flex items-center gap-2 p-2">
           <div className="rounded-lg bg-primary p-2 text-primary-foreground">
             <LayoutGrid className="h-6 w-6" />
           </div>

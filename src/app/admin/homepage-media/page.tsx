@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getGalleryMedia } from "../actions";
-import MediaUploader from "./MediaUploader";
+import MediaUploader from "../MediaUploader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GalleryMedia } from "@/lib/types";
 
@@ -104,4 +104,3 @@ export default function HomepageMediaPage() {
     </div>
   );
 }
-

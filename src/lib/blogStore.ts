@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { getBlogPosts, upsertBlogPost, deleteBlogPost } from '@/app/(dashboard)/actions';
+import { getBlogPosts, upsertBlogPost, deleteBlogPost } from '@/app/admin/actions';
 
 export interface BlogPost {
   id: number;

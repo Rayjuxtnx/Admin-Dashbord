@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { MenuItem } from './menuData';
-import { getMenuItems, upsertMenuItem, deleteMenuItem } from '@/app/(dashboard)/actions';
+import { getMenuItems, upsertMenuItem, deleteMenuItem } from '@/app/admin/actions';
 
 interface MenuState {
   menuItems: MenuItem[];
