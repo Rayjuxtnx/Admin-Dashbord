@@ -22,6 +22,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -38,15 +39,10 @@ const links = [
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentTab = searchParams.get('tab');
+  const currentTab = searchParams.get('tab') || 'overview';
 
-  const isActive = (tab: string | undefined, href: string) => {
-    // For admin pages with tabs
-    if (href.startsWith('/admin?tab=')) {
-        return currentTab === tab && pathname === '/admin';
-    }
-    // For other pages
-    return pathname === href;
+  const isActive = (tab: string | undefined) => {
+    return currentTab === tab && pathname === '/admin';
   }
 
 
@@ -69,7 +65,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={link.href}>
               <SidebarMenuButton
                 asChild
-                isActive={isActive(link.tab, link.href)}
+                isActive={isActive(link.tab)}
                 tooltip={link.label}
               >
                 <Link href={link.href}>
@@ -81,6 +77,7 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
+      <SidebarRail />
     </Sidebar>
   );
 }
