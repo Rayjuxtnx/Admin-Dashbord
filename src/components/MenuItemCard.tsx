@@ -9,12 +9,13 @@ const MenuItemCard = ({ name, price, description, image }: MenuItem) => {
   return (
     <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-lg">
       {imageUrl && (
-        <div className="relative h-48 w-full">
+        <div className="relative w-full">
             <Image 
                 src={imageUrl} 
                 alt={name}
-                fill
-                className="object-cover"
+                width={600}
+                height={400}
+                className="w-full h-auto object-contain"
                 unoptimized
             />
         </div>
