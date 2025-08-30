@@ -1,4 +1,5 @@
 
+
 'use server'
 
 import 'dotenv/config';
@@ -210,7 +211,7 @@ export async function getSalesDataForChart() {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     allSales.forEach(sale => {
-        if (!sale.created_at) return; // Skip records without a date
+        if (!sale.created_at || isNaN(new Date(sale.created_at).getTime())) return; 
 
         const saleDate = new Date(sale.created_at);
         const monthIndex = saleDate.getMonth();
@@ -233,6 +234,69 @@ export async function getSalesDataForChart() {
         .sort((a, b) => a.monthIndex - b.monthIndex)
         .map(({ name, online, manual }) => ({ name, online, manual }));
 };
+
+export async function getSalesDataForDayChart() {
+    const supabase = createServiceRoleClient();
+    
+    // Get start and end of today in UTC
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    // Fetch online payments from 'payments' table for today
+    const { data: onlinePayments, error: onlineError } = await supabase
+        .from('payments')
+        .select('amount, created_at')
+        .gte('created_at', startOfToday.toISOString())
+        .lte('created_at', endOfToday.toISOString());
+
+    if (onlineError) {
+        console.error('Error fetching today\'s online payments:', onlineError);
+        return [];
+    }
+    
+    // Fetch verified manual payments from 'manual_till_payments' table for today
+    const { data: manualPayments, error: manualError } = await supabase
+        .from('manual_till_payments')
+        .select('amount, created_at')
+        .eq('status', 'verified')
+        .gte('created_at', startOfToday.toISOString())
+        .lte('created_at', endOfToday.toISOString());
+        
+    if (manualError) {
+        console.error('Error fetching today\'s manual payments:', manualError);
+        return [];
+    }
+
+    const allSales = [...(onlinePayments || []), ...(manualPayments || [])];
+    
+    const hourlyTotals: { [key: number]: number } = {};
+    for (let i = 0; i < 24; i++) {
+        hourlyTotals[i] = 0;
+    }
+
+    allSales.forEach(sale => {
+        if (!sale.created_at || isNaN(new Date(sale.created_at).getTime())) return;
+        const saleDate = new Date(sale.created_at);
+        const hour = saleDate.getHours();
+        const amount = parseAmount(sale.amount);
+        hourlyTotals[hour] += amount;
+    });
+
+    const chartData = [];
+    let cumulativeTotal = 0;
+    for (let i = 0; i < 24; i++) {
+        const sales = hourlyTotals[i];
+        cumulativeTotal += sales;
+        chartData.push({
+            hour: `${i}:00`,
+            sales: sales,
+            cumulative: cumulativeTotal,
+        });
+    }
+
+    return chartData;
+}
 
 
 export async function getDashboardCounts() {
@@ -556,5 +620,3 @@ export async function deletePost(postId: number): Promise<void> {
   revalidatePath('/admin');
   return;
 }
-
-    

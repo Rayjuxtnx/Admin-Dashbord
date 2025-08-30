@@ -1,15 +1,17 @@
 
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Utensils, CalendarCheck, Newspaper, Video, Landmark } from "lucide-react";
 import AdminChart, { ProcessedSalesData } from "./AdminChart";
+import SalesByHourChart, { ProcessedSalesByHourData } from "./SalesByHourChart";
 import { RecentPayments } from "./RecentPayments";
 import { useEffect, useState, useCallback }from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { getDashboardCounts, getSalesDataForChart } from "./actions";
+import { getDashboardCounts, getSalesDataForChart, getSalesDataForDayChart } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,7 +40,8 @@ const AdminDashboard = () => {
       videosCount: 0,
       pendingManualPayments: 0,
     });
-    const [chartData, setChartData] = useState<ProcessedSalesData[]>([]);
+    const [monthlyChartData, setMonthlyChartData] = useState<ProcessedSalesData[]>([]);
+    const [dailyChartData, setDailyChartData] = useState<ProcessedSalesByHourData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
     
@@ -57,12 +60,14 @@ const AdminDashboard = () => {
     const fetchDashboardData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [countsData, salesData] = await Promise.all([
+            const [countsData, monthlySalesData, dailySalesData] = await Promise.all([
               getDashboardCounts(),
-              getSalesDataForChart()
+              getSalesDataForChart(),
+              getSalesDataForDayChart()
             ]);
             setCounts(countsData);
-            setChartData(salesData);
+            setMonthlyChartData(monthlySalesData);
+            setDailyChartData(dailySalesData);
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
             toast({
@@ -179,25 +184,35 @@ const AdminDashboard = () => {
                                         isLoading={isLoading}
                                     />
                                 </div>
-                                <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-                                    <Card className="lg:col-span-4 col-span-full">
+                                <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
+                                    <Card>
                                         <CardHeader>
-                                            <CardTitle>Sales Overview</CardTitle>
+                                            <CardTitle>Today's Sales by Hour</CardTitle>
+                                            <CardDescription>Bar shows sales per hour, line shows cumulative total.</CardDescription>
                                         </CardHeader>
                                         <CardContent className="pl-2">
-                                            <AdminChart data={chartData} isLoading={isLoading}/>
+                                            <SalesByHourChart data={dailyChartData} isLoading={isLoading}/>
                                         </CardContent>
                                     </Card>
-                                    <Card className="lg:col-span-3 col-span-full">
+                                     <Card>
                                         <CardHeader>
-                                            <CardTitle>Recent Payments (STK)</CardTitle>
-                                            <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
+                                            <CardTitle>Monthly Sales Overview</CardTitle>
+                                             <CardDescription>Online vs manually-entered sales.</CardDescription>
                                         </CardHeader>
-                                        <CardContent>
-                                            <RecentPayments />
+                                        <CardContent className="pl-2">
+                                            <AdminChart data={monthlyChartData} isLoading={isLoading}/>
                                         </CardContent>
                                     </Card>
                                 </div>
+                                 <Card>
+                                    <CardHeader>
+                                        <CardTitle>Recent Payments (STK)</CardTitle>
+                                        <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <RecentPayments />
+                                    </CardContent>
+                                </Card>
                             </TabsContent>
                             <TabsContent value="menu-management" className="space-y-4 mt-0">
                                 <MenuManagement />
