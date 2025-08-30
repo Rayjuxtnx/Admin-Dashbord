@@ -304,7 +304,7 @@ export async function deleteReservation(id: number) {
 export async function submitManualPaymentConfirmation(formData: { name: string; phone: string; mpesaCode: string; amount: number; paymentTime: string; }) {
     const supabase = createServiceRoleClient();
     const { data, error } = await supabase
-        .from('manual_confirmations')
+        .from('manual_till_payments')
         .insert({
             mpesa_code: formData.mpesaCode,
             customer_name: formData.name,
@@ -329,7 +329,7 @@ export async function submitManualPaymentConfirmation(formData: { name: string; 
 export async function getManualConfirmations() {
   const supabase = createServiceRoleClient();
   const { data, error } = await supabase
-    .from('manual_confirmations')
+    .from('manual_till_payments')
     .select('*')
     .order('created_at', { ascending: false });
 
@@ -342,8 +342,10 @@ export async function getManualConfirmations() {
 
 export async function updateConfirmationStatus(id: number, status: 'verified' | 'pending' | 'invalid') {
     const supabase = createServiceRoleClient();
+    
+    // First, update the status in the manual_till_payments table
     const { error } = await supabase
-        .from('manual_confirmations')
+        .from('manual_till_payments')
         .update({ status: status })
         .eq('id', id);
 
@@ -352,9 +354,10 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
         throw new Error("Could not update confirmation status.");
     }
 
+    // If the new status is 'verified', add a corresponding record to the main 'payments' table.
     if (status === 'verified') {
         const { data: confirmation } = await supabase
-            .from('manual_confirmations')
+            .from('manual_till_payments')
             .select('*')
             .eq('id', id)
             .single();
@@ -364,17 +367,20 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
                 .from('payments')
                 .insert({
                     amount: confirmation.amount,
-                    type: 'manual',
+                    type: 'manual', // Mark this payment as manual
                     phone_number: confirmation.customer_phone,
-                    raw_payload: confirmation,
+                    raw_payload: confirmation, // Store the original confirmation for reference
+                    mpesa_receipt_number: confirmation.mpesa_code
                 });
             if (paymentError) {
+                 // Even if this fails, the confirmation is already marked as verified, 
+                 // so we don't throw an error to the user. Log it for debugging.
                  console.error("Error inserting into payments table after verification:", paymentError);
             }
         }
     }
 
-
+    // Revalidate the admin path to show the changes immediately.
     revalidatePath('/admin');
 }
 
@@ -403,8 +409,9 @@ export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem>
     slug: item.name?.toLowerCase().replace(/\s+/g, '-') || `item-${Date.now()}`
   };
   
+  // This handles the case where a temporary ID is passed for a new item.
   if (itemToUpsert.id && String(itemToUpsert.id).startsWith('new-')) {
-    delete itemToUpsert.id;
+    delete (itemToUpsert as any).id;
   }
   
   const { data, error } = await supabase
@@ -459,7 +466,7 @@ export async function upsertBlogPost(post: Partial<BlogPost>): Promise<BlogPost>
   const postToUpsert = { ...post };
   
   if (postToUpsert.id && String(postToUpsert.id).startsWith('new-')) {
-    delete postToUpsert.id;
+    delete (postToUpsert as any).id;
   }
   
   const { data, error } = await supabase

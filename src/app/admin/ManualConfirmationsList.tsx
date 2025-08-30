@@ -55,19 +55,29 @@ export default function ManualConfirmationsList() {
 
   const fetchData = async () => {
       setIsLoading(true);
-      const data = await getManualConfirmations();
-      setConfirmations(data);
-      setIsLoading(false);
+      try {
+        const data = await getManualConfirmations();
+        setConfirmations(data);
+      } catch (error) {
+         console.error("Failed to fetch manual confirmations", error);
+         toast({
+            variant: "destructive",
+            title: "Load Failed",
+            description: "Could not fetch manual payment confirmations.",
+        });
+      } finally {
+         setIsLoading(false);
+      }
   }
 
   useEffect(() => {
     fetchData();
 
     const channel = supabase
-      .channel('realtime manual_confirmations')
+      .channel('realtime manual_till_payments')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'manual_confirmations' },
+        { event: '*', schema: 'public', table: 'manual_till_payments' },
         (payload) => {
           fetchData();
         }
@@ -154,7 +164,7 @@ export default function ManualConfirmationsList() {
                                 <TableCell className="font-medium">{c.customer_name}</TableCell>
                                 <TableCell>{c.customer_phone}</TableCell>
                                 <TableCell>Ksh {c.amount.toLocaleString()}</TableCell>
-                                <TableCell>{format(new Date(c.payment_time), "PPp")}</TableCell>
+                                <TableCell>{c.payment_time ? format(new Date(c.payment_time), "PPp") : 'N/A'}</TableCell>
                                 <TableCell>{formatDate(c.created_at)}</TableCell>
                                 <TableCell className="text-center">{formatStatus(c.status)}</TableCell>
                                 <TableCell className="text-right">

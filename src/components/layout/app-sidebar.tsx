@@ -13,6 +13,7 @@ import {
   Video,
   Settings,
   Newspaper,
+  SendToBack,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,20 +30,27 @@ const links = [
   { href: "/admin?tab=reservations", label: "Reservations", icon: BookCopy, tab: "reservations" },
   { href: "/admin?tab=manual-payments", label: "Manual Payments", icon: Landmark, tab: "manual-payments" },
   { href: "/admin?tab=blog", label: "Blog", icon: Newspaper, tab: "blog" },
-  { href: "/admin/menu", label: "Public Menu", icon: Utensils, tab: "public-menu" },
+  { href: "/admin?tab=menu-management", label: "Menu Management", icon: Utensils, tab: "menu-management" },
   { href: "/admin?tab=homepage-media", label: "Homepage Media", icon: ImageIcon, tab: "homepage-media" },
   { href: "/admin?tab=video-gallery", label: "Video Gallery", icon: Video, tab: "video-gallery" },
 ];
+
+const secondaryLinks = [
+    { href: "/menu", label: "Public Menu", icon: Utensils },
+    { href: "/payment-confirmation", label: "Submit Till Payment", icon: SendToBack },
+]
 
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get('tab');
 
-  const isActive = (tab: string, href: string) => {
+  const isActive = (tab: string | undefined, href: string) => {
+    // For admin pages with tabs
     if (href.startsWith('/admin?tab=')) {
         return currentTab === tab && pathname === '/admin';
     }
+    // For other pages
     return pathname === href;
   }
 
@@ -54,7 +62,7 @@ export function AppSidebar() {
           <div className="rounded-lg bg-primary p-2 text-primary-foreground">
             <LayoutGrid className="h-6 w-6" />
           </div>
-          <h1 className="text-xl font-bold font-headline text-primary-foreground group-data-[collapsible=icon]:hidden">
+          <h1 className="text-xl font-bold font-headline text-sidebar-foreground group-data-[collapsible=icon]:hidden">
             AdminLink
           </h1>
         </Link>
@@ -70,6 +78,24 @@ export function AppSidebar() {
                 tooltip={link.label}
               >
                 <Link href={link.href}>
+                  <link.icon className="h-5 w-5" />
+                  <span>{link.label}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+        <Separator className="my-4 bg-sidebar-border" />
+         <SidebarMenu>
+          {secondaryLinks.map((link) => (
+            <SidebarMenuItem key={link.href}>
+              <SidebarMenuButton
+                asChild
+                variant="ghost"
+                isActive={isActive(undefined, link.href)}
+                tooltip={link.label}
+              >
+                <Link href={link.href} target="_blank">
                   <link.icon className="h-5 w-5" />
                   <span>{link.label}</span>
                 </Link>
