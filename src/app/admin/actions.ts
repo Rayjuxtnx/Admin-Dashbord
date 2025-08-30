@@ -209,15 +209,14 @@ export async function getSalesDataForChart() {
 export async function getDashboardCounts() {
     const supabase = createServiceRoleClient();
     
+    // Reservations Count
     const { count: reservationsCount, error: reservationsError } = await supabase
         .from('reservations')
         .select('*', { count: 'exact', head: true });
     
-    if (reservationsError) {
-        console.error('Error fetching reservations count:', reservationsError);
-    }
+    if (reservationsError) console.error('Error fetching reservations count:', reservationsError);
     
-    // Fetch from both payments (for online) and verified manual_till_payments
+    // Total Revenue Calculation
     const { data: onlinePaymentsData, error: onlinePaymentsError } = await supabase
         .from('payments')
         .select('amount');
@@ -227,9 +226,7 @@ export async function getDashboardCounts() {
         .select('amount')
         .eq('status', 'verified');
 
-    let totalRevenue = "Ksh 0";
     let totalAmount = 0;
-
     if (!onlinePaymentsError && onlinePaymentsData) {
         totalAmount += onlinePaymentsData.reduce((acc, payment) => acc + parseAmount(payment.amount), 0);
     } else if (onlinePaymentsError) {
@@ -242,32 +239,38 @@ export async function getDashboardCounts() {
         console.error("Error fetching verified manual payments:", manualPaymentsError);
     }
     
-    totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(totalAmount);
+    const totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(totalAmount);
 
+    // Published Posts Count
     const { count: publishedPostsCount, error: postsError } = await supabase
         .from('posts')
         .select('*', { count: 'exact', head: true });
 
-    if (postsError) {
-        console.error('Error fetching posts count:', postsError);
-    }
+    if (postsError) console.error('Error fetching posts count:', postsError);
     
+    // Gallery Videos Count
     const { count: videosCount, error: videosError } = await supabase
         .from('gallery')
         .select('*', { count: 'exact', head: true })
         .eq('type', 'video')
-        .eq('purpose', 'homepage_hero');
+        .eq('purpose', 'gallery');
         
-    if (videosError) {
-        console.error('Error fetching videos count:', videosError);
-    }
+    if (videosError) console.error('Error fetching videos count:', videosError);
 
+    // Pending Manual Payments Count
+    const { count: pendingManualPayments, error: pendingError } = await supabase
+        .from('manual_till_payments')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+    
+    if (pendingError) console.error('Error fetching pending manual payments count:', pendingError);
 
     return {
         reservationsCount: reservationsCount ?? 0,
         totalRevenue,
         publishedPostsCount: publishedPostsCount ?? 0,
         videosCount: videosCount ?? 0,
+        pendingManualPayments: pendingManualPayments ?? 0,
     };
 }
 

@@ -21,6 +21,7 @@ import VideoGalleryPage from "./video-gallery/page";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { Badge } from "@/components/ui/badge";
 
 
 const AdminDashboardPage = () => {
@@ -34,6 +35,7 @@ const AdminDashboardPage = () => {
       totalRevenue: 'Ksh 0',
       publishedPostsCount: 0,
       videosCount: 0,
+      pendingManualPayments: 0,
     });
     const [isLoadingCounts, setIsLoadingCounts] = useState(true);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
@@ -41,13 +43,8 @@ const AdminDashboardPage = () => {
     const fetchInitialData = async () => {
         setIsLoadingCounts(true);
         try {
-            const { reservationsCount, totalRevenue, publishedPostsCount, videosCount } = await getDashboardCounts();
-            setCounts({
-              reservationsCount,
-              totalRevenue,
-              publishedPostsCount,
-              videosCount
-            })
+            const data = await getDashboardCounts();
+            setCounts(data);
         } catch (error) {
             console.error("Failed to fetch dashboard counts:", error);
             toast({
@@ -66,35 +63,48 @@ const AdminDashboardPage = () => {
       fetchInitialData();
       fetchMenuItems();
       
-      const paymentsChannel = supabase
-        .channel('realtime-dashboard-payments')
+      const channel = supabase
+        .channel('realtime-dashboard-updates')
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'payments' },
+          { event: '*', schema: 'public', table: 'payments' },
           (payload) => {
             console.log('New payment detected, refreshing dashboard counts...');
             fetchInitialData();
           }
-        )
-        .subscribe();
-      
-      const manualPaymentsChannel = supabase
-        .channel('realtime-dashboard-manual-payments')
-        .on(
+        ).on(
           'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'manual_till_payments' },
+          { event: '*', schema: 'public', table: 'manual_till_payments' },
           (payload) => {
-             if(payload.new.status === 'verified') {
-                console.log('Manual payment verified, refreshing dashboard counts...');
-                fetchInitialData();
-             }
+            console.log('Manual payment change detected, refreshing dashboard counts...');
+            fetchInitialData();
+          }
+        ).on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'reservations' },
+          (payload) => {
+            console.log('Reservations change detected, refreshing dashboard counts...');
+            fetchInitialData();
+          }
+        ).on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'posts' },
+          (payload) => {
+            console.log('Posts change detected, refreshing dashboard counts...');
+            fetchInitialData();
+          }
+        ).on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'gallery' },
+          (payload) => {
+            console.log('Gallery change detected, refreshing dashboard counts...');
+            fetchInitialData();
           }
         )
         .subscribe();
         
       return () => {
-          supabase.removeChannel(paymentsChannel);
-          supabase.removeChannel(manualPaymentsChannel);
+          supabase.removeChannel(channel);
       }
 
     }, [toast, fetchMenuItems]);
@@ -132,6 +142,13 @@ const AdminDashboardPage = () => {
       </Card>
     )
 
+    const TabWithBadge = ({ value, label, count, isLoading }: { value: string, label: string, count: number, isLoading: boolean}) => (
+        <TabsTrigger value={value} className="flex items-center gap-2">
+            {label}
+            {isLoading ? <Skeleton className="h-5 w-5 rounded-full" /> : count > 0 && <Badge variant="secondary">{count}</Badge>}
+        </TabsTrigger>
+    );
+
     return (
         <DashboardLayout>
             <div className="flex-col md:flex">
@@ -140,14 +157,14 @@ const AdminDashboardPage = () => {
                         <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
                     </div>
                     <Tabs defaultValue={initialTab} className="space-y-4">
-                        <TabsList>
+                        <TabsList className="flex-wrap h-auto">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="menu-management">Menu Management</TabsTrigger>
-                            <TabsTrigger value="reservations">Reservations</TabsTrigger>
-                            <TabsTrigger value="manual-payments">Manual Payments</TabsTrigger>
-                            <TabsTrigger value="posts">Posts</TabsTrigger>
+                            <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
+                            <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoadingCounts} />
+                            <TabWithBadge value="manual-payments" label="Manual Payments" count={counts.pendingManualPayments} isLoading={isLoadingCounts} />
+                            <TabWithBadge value="posts" label="Posts" count={counts.publishedPostsCount} isLoading={isLoadingCounts} />
                             <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
-                            <TabsTrigger value="video-gallery">Video Gallery</TabsTrigger>
+                            <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoadingCounts} />
                             <TabsTrigger asChild><Link href="/menu">Public Menu</Link></TabsTrigger>
                         </TabsList>
                         <TabsContent value="overview" className="space-y-4">
