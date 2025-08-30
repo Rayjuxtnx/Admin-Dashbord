@@ -111,14 +111,13 @@ const MenuPage = () => {
     if (lowercasedSearchTerm.trim() !== '') {
       return categories
         .map(category => {
-          if (!category.items) return { ...category, items: [] };
           const filteredItems = category.items.filter(item =>
             item.name.toLowerCase().includes(lowercasedSearchTerm) ||
             (item.description && item.description.toLowerCase().includes(lowercasedSearchTerm))
           );
           return { ...category, items: filteredItems };
         })
-        .filter(category => category.items && category.items.length > 0); // Only include categories that have matching items
+        .filter(category => category.items.length > 0); // Only include categories that have matching items
     }
 
     // Otherwise, return the category-filtered list
@@ -215,7 +214,7 @@ const MenuPage = () => {
               <DropdownMenuRadioGroup value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as FilterCategory)}>
                 <DropdownMenuRadioItem value="All">All</DropdownMenuRadioItem>
                 {menuCategoriesList.map(cat => (
-                  <DropdownMenuRadioItem key={cat.title} value={cat.title} className={cn(!cat.items || cat.items.length === 0 && "hidden")}>
+                  <DropdownMenuRadioItem key={cat.title} value={cat.title} className={cn(cat.items.length === 0 && "hidden")}>
                     {formatCategoryTitle(cat.title)}
                   </DropdownMenuRadioItem>
                 ))}
