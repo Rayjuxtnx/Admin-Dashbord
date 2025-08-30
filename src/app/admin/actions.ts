@@ -169,10 +169,12 @@ export async function getRecentPayments() {
   return data.map(p => ({...p, phone_number: p.phone_number}));
 }
 
-const parseAmount = (amount: any) => {
-    if (!amount) return 0;
+const parseAmount = (amount: any): number => {
+    if (amount === null || amount === undefined) return 0;
     if (typeof amount === 'number') return amount;
-    return parseFloat(String(amount).replace(/[^0-9.-]+/g, "")) || 0;
+    // Attempt to parse a string, removing any non-numeric characters except for a decimal point.
+    const num = parseFloat(String(amount).replace(/[^0-9.-]+/g, ""));
+    return isNaN(num) ? 0 : num;
 }
 
 export async function getSalesDataForChart() {
@@ -222,8 +224,7 @@ export async function getDashboardCounts() {
     let totalRevenue = "Ksh 0";
     if (!paymentsError) {
         const total = paymentsData.reduce((acc, payment) => {
-            const amount = parseFloat(String(payment.amount).replace(/[^0-9.-]+/g,""));
-            return acc + (isNaN(amount) ? 0 : amount);
+            return acc + parseAmount(payment.amount);
         }, 0);
         totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(total);
     } else {
