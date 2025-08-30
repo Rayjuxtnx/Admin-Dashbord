@@ -19,13 +19,14 @@ import PostManagementPage from "./posts/page";
 import HomepageMediaPage from "./homepage-media/page";
 import VideoGalleryPage from "./video-gallery/page";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 
 
 const AdminDashboardPage = () => {
     const { toast } = useToast();
+    const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     
@@ -43,9 +44,15 @@ const AdminDashboardPage = () => {
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
     
     useEffect(() => {
+        setIsClient(true);
         const currentTab = searchParams.get('tab') || 'overview';
         setActiveTab(currentTab);
     }, [searchParams]);
+    
+    const handleTabChange = (tab: string) => {
+        setActiveTab(tab);
+        router.push(`${pathname}?tab=${tab}`);
+    };
 
     const fetchDashboardData = useCallback(async () => {
         setIsLoading(true);
@@ -69,8 +76,6 @@ const AdminDashboardPage = () => {
     }, [toast]);
 
     useEffect(() => {
-      setIsClient(true);
-      
       fetchDashboardData();
       fetchMenuItems();
       
@@ -98,7 +103,7 @@ const AdminDashboardPage = () => {
     if (!isClient) {
       return (
         <DashboardLayout>
-            <div className="flex-1 space-y-4 p-8 pt-6">
+            <div className="flex-1 space-y-4 p-4 md:p-6 lg:p-8">
                 <Skeleton className="h-10 w-48" />
                 <Skeleton className="h-12 w-full" />
                 <div className="space-y-4">
@@ -138,12 +143,12 @@ const AdminDashboardPage = () => {
     return (
         <DashboardLayout>
             <div className="flex-col md:flex">
-                <div className="flex-1 space-y-4 p-8 pt-6">
-                    <div className="flex items-center justify-between space-y-2">
+                <div className="flex-1 space-y-4">
+                    <div className="px-4 md:px-6 lg:px-8 flex items-center justify-between space-y-2">
                         <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
                     </div>
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                        <TabsList className="flex-wrap h-auto">
+                    <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+                        <TabsList className="flex-wrap h-auto mx-4 md:mx-6 lg:mx-8">
                             <TabsTrigger value="overview">Overview</TabsTrigger>
                             <TabWithBadge value="menu-management" label="Menu Management" count={menuItems.length} isLoading={menuLoading} />
                             <TabWithBadge value="reservations" label="Reservations" count={counts.reservationsCount} isLoading={isLoading} />
@@ -152,75 +157,77 @@ const AdminDashboardPage = () => {
                             <TabsTrigger value="homepage-media">Homepage Media</TabsTrigger>
                             <TabWithBadge value="video-gallery" label="Video Gallery" count={counts.videosCount} isLoading={isLoading} />
                         </TabsList>
-                        <TabsContent value="overview" className="space-y-4">
-                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                <StatCard 
-                                    title="Total Revenue"
-                                    value={counts.totalRevenue}
-                                    icon={Landmark}
-                                    description="from all successful payments"
-                                    isLoading={isLoading}
-                                />
-                                <StatCard 
-                                    title="Total Reservations"
-                                    value={counts.reservationsCount}
-                                    icon={CalendarCheck}
-                                    description="active bookings"
-                                    isLoading={isLoading}
-                                />
-                                <StatCard 
-                                    title="Total Menu Items"
-                                    value={menuItems.length}
-                                    icon={Utensils}
-                                    description="items available on the menu"
-                                    isLoading={menuLoading}
-                                />
-                                <StatCard 
-                                    title="Published Posts"
-                                    value={counts.publishedPostsCount}
-                                    icon={Newspaper}
-                                    description="posts on the blog page"
-                                    isLoading={isLoading}
-                                />
-                            </div>
-                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                                <Card className="col-span-4">
-                                    <CardHeader>
-                                        <CardTitle>Sales Overview</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="pl-2">
-                                        <AdminChart data={chartData} isLoading={isLoading}/>
-                                    </CardContent>
-                                </Card>
-                                <Card className="col-span-3">
-                                    <CardHeader>
-                                        <CardTitle>Recent Payments (STK)</CardTitle>
-                                        <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <RecentPayments />
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="menu-management" className="space-y-4">
-                            <MenuManagement />
-                        </TabsContent>
-                         <TabsContent value="reservations" className="space-y-4">
-                            <ReservationsList />
-                        </TabsContent>
-                        <TabsContent value="manual-payments" className="space-y-4">
-                            <ManualConfirmationsList />
-                        </TabsContent>
-                        <TabsContent value="posts" className="space-y-4">
-                            <PostManagementPage />
-                        </TabsContent>
-                        <TabsContent value="homepage-media" className="space-y-4">
-                            <HomepageMediaPage />
-                        </TabsContent>
-                        <TabsContent value="video-gallery" className="space-y-4">
-                            <VideoGalleryPage />
-                        </TabsContent>
+                        <div className="px-4 md:px-6 lg:px-8">
+                            <TabsContent value="overview" className="space-y-4 mt-0">
+                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                    <StatCard 
+                                        title="Total Revenue"
+                                        value={counts.totalRevenue}
+                                        icon={Landmark}
+                                        description="from all successful payments"
+                                        isLoading={isLoading}
+                                    />
+                                    <StatCard 
+                                        title="Total Reservations"
+                                        value={counts.reservationsCount}
+                                        icon={CalendarCheck}
+                                        description="active bookings"
+                                        isLoading={isLoading}
+                                    />
+                                    <StatCard 
+                                        title="Total Menu Items"
+                                        value={menuItems.length}
+                                        icon={Utensils}
+                                        description="items available on the menu"
+                                        isLoading={menuLoading}
+                                    />
+                                    <StatCard 
+                                        title="Published Posts"
+                                        value={counts.publishedPostsCount}
+                                        icon={Newspaper}
+                                        description="posts on the blog page"
+                                        isLoading={isLoading}
+                                    />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                                    <Card className="col-span-4">
+                                        <CardHeader>
+                                            <CardTitle>Sales Overview</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="pl-2">
+                                            <AdminChart data={chartData} isLoading={isLoading}/>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="col-span-3">
+                                        <CardHeader>
+                                            <CardTitle>Recent Payments (STK)</CardTitle>
+                                            <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <RecentPayments />
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="menu-management" className="space-y-4 mt-0">
+                                <MenuManagement />
+                            </TabsContent>
+                             <TabsContent value="reservations" className="space-y-4 mt-0">
+                                <ReservationsList />
+                            </TabsContent>
+                            <TabsContent value="manual-payments" className="space-y-4 mt-0">
+                                <ManualConfirmationsList />
+                            </TabsContent>
+                            <TabsContent value="posts" className="space-y-4 mt-0">
+                                <PostManagementPage />
+                            </TabsContent>
+                            <TabsContent value="homepage-media" className="space-y-4 mt-0">
+                                <HomepageMediaPage />
+                            </TabsContent>
+                            <TabsContent value="video-gallery" className="space-y-4 mt-0">
+                                <VideoGalleryPage />
+                            </TabsContent>
+                        </div>
                     </Tabs>
                 </div>
             </div>
