@@ -13,13 +13,14 @@ import { getDashboardCounts } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
 import { Skeleton } from "@/components/ui/skeleton";
-import ReservationsList from "../(dashboard)/reservations/page";
+import ReservationsList from "./ReservationsList";
 import ManualConfirmationsList from "./ManualConfirmationsList";
 import PostManagementPage from "./posts/page";
 import HomepageMediaPage from "./homepage-media/page";
 import VideoGalleryPage from "./video-gallery/page";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 
 const AdminDashboardPage = () => {
@@ -36,11 +37,8 @@ const AdminDashboardPage = () => {
     });
     const [isLoadingCounts, setIsLoadingCounts] = useState(true);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
-
-    useEffect(() => {
-      setIsClient(true);
-      
-      const fetchInitialData = async () => {
+    
+    const fetchInitialData = async () => {
         setIsLoadingCounts(true);
         try {
             const { reservationsCount, totalRevenue, publishedPostsCount, videosCount } = await getDashboardCounts();
@@ -60,10 +58,30 @@ const AdminDashboardPage = () => {
         } finally {
           setIsLoadingCounts(false);
         }
-      };
+    };
+
+    useEffect(() => {
+      setIsClient(true);
       
       fetchInitialData();
       fetchMenuItems();
+      
+      const channel = supabase
+        .channel('realtime dashboard-counts')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'payments' },
+          (payload) => {
+            console.log('New payment detected, refreshing dashboard counts...');
+            fetchInitialData();
+          }
+        )
+        .subscribe();
+        
+      return () => {
+          supabase.removeChannel(channel);
+      }
+
     }, [toast, fetchMenuItems]);
 
     if (!isClient) {
