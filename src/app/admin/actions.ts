@@ -227,36 +227,26 @@ export async function getDashboardCounts() {
         .select('*', { count: 'exact', head: true });
     
     if (reservationsError) console.error('Error fetching reservations count:', reservationsError);
-    
-    const { data: onlinePaymentsData, error: onlinePaymentsError } = await supabase
+
+    // Fetch from automated payments table
+    const { data: onlinePayments, error: onlineError } = await supabase
         .from('payments')
         .select('amount');
+
+    if (onlineError) console.error("Error fetching online payments:", onlineError);
     
-    const { data: manualPaymentsData, error: manualPaymentsError } = await supabase
+    // Fetch from manual payments table (only verified ones)
+    const { data: manualPayments, error: manualError } = await supabase
         .from('manual_till_payments')
         .select('amount')
         .eq('status', 'verified');
-
-    let totalAmount = 0;
-    if (!onlinePaymentsError && onlinePaymentsData) {
-        totalAmount += onlinePaymentsData.reduce((acc, payment) => acc + parseAmount(payment.amount), 0);
-    } else if (onlinePaymentsError) {
-        console.error("Error fetching online payments:", onlinePaymentsError);
-    }
-
-    if (!manualPaymentsError && manualPaymentsData) {
-        // This part is redundant if verified manual payments are inserted into `payments` table
-        // But we'll keep it for robustness in case the insert fails.
-        // It's better to calculate from the single source of truth: the `payments` table.
-    }
     
-    const {data: allPaymentsData, error: allPaymentsError } = await supabase
-        .from('payments')
-        .select('amount');
+    if (manualError) console.error("Error fetching manual payments:", manualError);
 
-    if (!allPaymentsError && allPaymentsData) {
-        totalAmount = allPaymentsData.reduce((acc, payment) => acc + parseAmount(payment.amount), 0);
-    }
+    const onlineTotal = onlinePayments?.reduce((sum, p) => sum + parseAmount(p.amount), 0) ?? 0;
+    const manualTotal = manualPayments?.reduce((sum, p) => sum + parseAmount(p.amount), 0) ?? 0;
+    
+    const totalAmount = onlineTotal + manualTotal;
     
     const totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(totalAmount);
 
@@ -375,6 +365,47 @@ export async function getManualConfirmations() {
 export async function updateConfirmationStatus(id: number, status: 'verified' | 'pending' | 'invalid') {
     const supabase = createServiceRoleClient();
     
+    // First, check if we are verifying and if the payment already exists in the main table to prevent duplicates
+    if (status === 'verified') {
+        const { data: confirmation } = await supabase
+            .from('manual_till_payments')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (confirmation) {
+            const { count: existingPaymentCount, error: checkError } = await supabase
+                .from('payments')
+                .select('*', { count: 'exact', head: true })
+                .eq('mpesa_receipt_number', confirmation.mpesa_code);
+
+            if (checkError) {
+                console.error("Error checking for existing payment:", checkError);
+                throw new Error("Could not verify payment due to a database error.");
+            }
+
+            if (existingPaymentCount === 0) {
+                 const { error: paymentError } = await supabase
+                    .from('payments')
+                    .insert({
+                        amount: confirmation.amount,
+                        type: 'manual', 
+                        phone_number: confirmation.customer_phone,
+                        raw_payload: confirmation, 
+                        mpesa_receipt_number: confirmation.mpesa_code,
+                        created_at: confirmation.created_at, // Use the original creation time
+                    });
+                if (paymentError) {
+                     console.error("Error inserting into payments table after verification:", paymentError);
+                     throw new Error("Could not save the verified payment.");
+                }
+            } else {
+                console.warn(`Payment with M-Pesa code ${confirmation.mpesa_code} already exists in the payments table. Skipping insertion.`);
+            }
+        }
+    }
+
+    // Now, update the status in the manual_till_payments table
     const { error } = await supabase
         .from('manual_till_payments')
         .update({ status: status })
@@ -384,30 +415,7 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
         console.error("Error updating confirmation status:", error);
         throw new Error("Could not update confirmation status.");
     }
-
-    if (status === 'verified') {
-        const { data: confirmation } = await supabase
-            .from('manual_till_payments')
-            .select('*')
-            .eq('id', id)
-            .single();
-
-        if (confirmation) {
-             const { error: paymentError } = await supabase
-                .from('payments')
-                .insert({
-                    amount: confirmation.amount,
-                    type: 'manual', 
-                    phone_number: confirmation.customer_phone,
-                    raw_payload: confirmation, 
-                    mpesa_receipt_number: confirmation.mpesa_code
-                });
-            if (paymentError) {
-                 console.error("Error inserting into payments table after verification:", paymentError);
-            }
-        }
-    }
-
+    
     revalidatePath('/admin');
 }
 
@@ -534,3 +542,5 @@ export async function deletePost(postId: number): Promise<void> {
   revalidatePath('/admin');
   return;
 }
+
+    
