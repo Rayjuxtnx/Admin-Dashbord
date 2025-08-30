@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
-import { Utensils, CalendarCheck, Newspaper, Video } from "lucide-react";
+import { Utensils, CalendarCheck, Newspaper, Video, Landmark } from "lucide-react";
 import AdminChart from "./AdminChart";
 import { RecentPayments } from "./RecentPayments";
 import { useEffect, useState }from "react";
@@ -16,7 +16,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ReservationsList from "./ReservationsList";
 import ManualConfirmationsList from "./ManualConfirmationsList";
 import BlogManagementPage from "./blogs/page";
-import MediaUploader from "./MediaUploader";
 import HomepageMediaPage from "./homepage-media/page";
 import VideoGalleryPage from "./video-gallery/page";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -27,6 +26,7 @@ const AdminDashboardPage = () => {
     const [isClient, setIsClient] = useState(false);
     const [counts, setCounts] = useState({
       reservationsCount: 0,
+      totalRevenue: 'Ksh 0',
       publishedBlogsCount: 0,
       videosCount: 0,
     });
@@ -39,9 +39,10 @@ const AdminDashboardPage = () => {
       const fetchInitialData = async () => {
         setIsLoadingCounts(true);
         try {
-            const { reservationsCount, publishedBlogsCount, videosCount } = await getDashboardCounts();
+            const { reservationsCount, totalRevenue, publishedBlogsCount, videosCount } = await getDashboardCounts();
             setCounts({
               reservationsCount,
+              totalRevenue,
               publishedBlogsCount,
               videosCount
             })
@@ -105,11 +106,11 @@ const AdminDashboardPage = () => {
                         <TabsContent value="overview" className="space-y-4">
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                                 <StatCard 
-                                    title="Total Menu Items"
-                                    value={menuItems.length}
-                                    icon={Utensils}
-                                    description="items available on the menu"
-                                    isLoading={menuLoading}
+                                    title="Total Revenue"
+                                    value={counts.totalRevenue}
+                                    icon={Landmark}
+                                    description="from all successful payments"
+                                    isLoading={isLoadingCounts}
                                 />
                                 <StatCard 
                                     title="Total Reservations"
@@ -119,17 +120,17 @@ const AdminDashboardPage = () => {
                                     isLoading={isLoadingCounts}
                                 />
                                 <StatCard 
+                                    title="Total Menu Items"
+                                    value={menuItems.length}
+                                    icon={Utensils}
+                                    description="items available on the menu"
+                                    isLoading={menuLoading}
+                                />
+                                <StatCard 
                                     title="Published Blogs"
                                     value={`+${counts.publishedBlogsCount}`}
                                     icon={Newspaper}
                                     description="posts on the blog page"
-                                    isLoading={isLoadingCounts}
-                                />
-                                <StatCard 
-                                    title="Homepage Videos"
-                                    value={`+${counts.videosCount}`}
-                                    icon={Video}
-                                    description="videos featured on the homepage"
                                     isLoading={isLoadingCounts}
                                 />
                             </div>

@@ -206,6 +206,7 @@ export async function getSalesDataForChart() {
 
 export async function getDashboardCounts() {
     const supabase = createServiceRoleClient();
+    
     const { count: reservationsCount, error: reservationsError } = await supabase
         .from('reservations')
         .select('*', { count: 'exact', head: true });
@@ -218,13 +219,13 @@ export async function getDashboardCounts() {
         .from('payments')
         .select('amount');
 
-    let totalPayments = "N/A";
+    let totalRevenue = "Ksh 0";
     if (!paymentsError) {
         const total = paymentsData.reduce((acc, payment) => {
             const amount = parseFloat(String(payment.amount).replace(/[^0-9.-]+/g,""));
             return acc + (isNaN(amount) ? 0 : amount);
         }, 0);
-        totalPayments = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KES' }).format(total);
+        totalRevenue = new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(total);
     } else {
         console.error("Error fetching payments:", paymentsError);
     }
@@ -251,7 +252,7 @@ export async function getDashboardCounts() {
 
     return {
         reservationsCount: reservationsCount ?? 0,
-        totalPayments,
+        totalRevenue,
         publishedBlogsCount: publishedBlogsCount ?? 0,
         videosCount: videosCount ?? 0,
     };
@@ -387,7 +388,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 
     if (error) {
         console.error("Error fetching menu items:", error);
-        if (error.message.includes("relation \"menu_items\" does not exist")) {
+        if (error.message.includes("does not exist")) {
              throw new Error("The 'menu_items' table does not exist in your database. Please create it first in the Supabase dashboard.");
         }
         throw new Error("Failed to fetch menu items from the database.");
