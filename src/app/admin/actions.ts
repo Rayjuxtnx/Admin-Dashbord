@@ -22,7 +22,7 @@ const createServiceRoleClient = () => {
 }
 
 async function ensureBucketExists(bucketName: string) {
-    const supabase = createServiceRolegitt();
+    const supabase = createServiceRoleClient();
     const { data: buckets, error } = await supabase.storage.listBuckets();
 
     if (error) {
@@ -172,33 +172,31 @@ export async function getRecentPayments() {
 const parseAmount = (amount: any): number => {
     if (amount === null || amount === undefined) return 0;
     if (typeof amount === 'number') return amount;
-    // Attempt to parse a string, removing any non-numeric characters except for a decimal point.
     const num = parseFloat(String(amount).replace(/[^0-9.-]+/g, ""));
     return isNaN(num) ? 0 : num;
 }
 
 export async function getSalesDataForChart() {
     const supabase = createServiceRoleClient();
+    
     const { data: onlineSales, error: onlineError } = await supabase
         .from('payments')
         .select('amount, created_at')
         .eq('type', 'online');
-
-    if (onlineError) console.error('Error fetching online sales data:', onlineError);
+    if (onlineError) console.error('Error fetching online sales:', onlineError);
 
     const { data: manualSales, error: manualError } = await supabase
         .from('payments')
         .select('amount, created_at')
         .eq('type', 'manual');
-
-    if (manualError) console.error('Error fetching manual sales data:', manualError);
+    if (manualError) console.error('Error fetching manual sales:', manualError);
 
     const allSales = [
-        ...(onlineSales || []).map(s => ({ ...s, type: 'online' })),
-        ...(manualSales || []).map(s => ({ ...s, type: 'manual' })),
+        ...(onlineSales || []).map(s => ({ ...s, type: 'online', amount: parseAmount(s.amount) })),
+        ...(manualSales || []).map(s => ({ ...s, type: 'manual', amount: parseAmount(s.amount) })),
     ];
-    
-    const monthlyTotals: { [key: string]: { name: string, online: number, manual: number } } = {};
+
+    const monthlyTotals: { [key: string]: { name: string, online: number, manual: number, monthIndex: number } } = {};
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     allSales.forEach(sale => {
@@ -206,22 +204,21 @@ export async function getSalesDataForChart() {
         const monthIndex = saleDate.getMonth();
         const year = saleDate.getFullYear();
         const key = `${year}-${monthIndex}`;
-        const amount = parseAmount(sale.amount);
 
         if (!monthlyTotals[key]) {
-            monthlyTotals[key] = { name: monthNames[monthIndex], online: 0, manual: 0 };
+            monthlyTotals[key] = { name: monthNames[monthIndex], online: 0, manual: 0, monthIndex: monthIndex };
         }
 
         if (sale.type === 'online') {
-            monthlyTotals[key].online += amount;
+            monthlyTotals[key].online += sale.amount;
         } else if (sale.type === 'manual') {
-            monthlyTotals[key].manual += amount;
+            monthlyTotals[key].manual += sale.amount;
         }
     });
 
-    return Object.values(monthlyTotals).sort((a, b) => {
-        return monthNames.indexOf(a.name) - monthNames.indexOf(b.name);
-    });
+    return Object.values(monthlyTotals)
+        .sort((a, b) => a.monthIndex - b.monthIndex)
+        .map(({name, online, manual}) => ({name, online, manual})); // remove monthIndex before returning
 };
 
 
@@ -532,5 +529,3 @@ export async function deletePost(postId: number): Promise<void> {
   revalidatePath('/admin');
   return;
 }
-
-    
