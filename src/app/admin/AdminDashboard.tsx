@@ -7,11 +7,12 @@ import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Utensils, CalendarCheck, Newspaper, Video, Landmark, ChevronsUpDown } from "lucide-react";
 import AdminChart, { ProcessedSalesData } from "./AdminChart";
 import SalesByHourChart, { ProcessedSalesByHourData } from "./SalesByHourChart";
+import TopSellingChart, { TopSellingItemData } from "./TopSellingChart";
 import { RecentPayments } from "./RecentPayments";
 import { useEffect, useState, useCallback }from "react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { getDashboardCounts, getSalesDataForChart, getSalesDataForDayChart } from "./actions";
+import { getDashboardCounts, getSalesDataForChart, getSalesDataForDayChart, getTopSellingMenuItems } from "./actions";
 import { useMenuStore } from "@/lib/menuStore";
 import MenuManagement from "./MenuManagement";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,6 +47,7 @@ const AdminDashboard = () => {
     });
     const [monthlyChartData, setMonthlyChartData] = useState<ProcessedSalesData[]>([]);
     const [dailyChartData, setDailyChartData] = useState<ProcessedSalesByHourData[]>([]);
+    const [topItemsData, setTopItemsData] = useState<TopSellingItemData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { menuItems, isLoading: menuLoading, fetchMenuItems } = useMenuStore();
     
@@ -74,14 +76,16 @@ const AdminDashboard = () => {
     const fetchDashboardData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [countsData, monthlySalesData, dailySalesData] = await Promise.all([
+            const [countsData, monthlySalesData, dailySalesData, topItems] = await Promise.all([
               getDashboardCounts(),
               getSalesDataForChart(),
-              getSalesDataForDayChart()
+              getSalesDataForDayChart(),
+              getTopSellingMenuItems()
             ]);
             setCounts(countsData);
             setMonthlyChartData(monthlySalesData);
             setDailyChartData(dailySalesData);
+            setTopItemsData(topItems);
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
             toast({
@@ -240,15 +244,26 @@ const AdminDashboard = () => {
                                         </CardContent>
                                     </Card>
                                 </div>
-                                 <Card>
-                                    <CardHeader>
-                                        <CardTitle>Recent Payments (STK)</CardTitle>
-                                        <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <RecentPayments />
-                                    </CardContent>
-                                </Card>
+                                 <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Recent Payments (STK)</CardTitle>
+                                            <CardDescription>Latest automated M-Pesa STK Push transactions.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <RecentPayments />
+                                        </CardContent>
+                                    </Card>
+                                     <Card>
+                                        <CardHeader>
+                                            <CardTitle>Top Selling Items</CardTitle>
+                                            <CardDescription>Most popular items based on pre-orders.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="pl-0 md:pl-2">
+                                            <TopSellingChart data={topItemsData} isLoading={isLoading}/>
+                                        </CardContent>
+                                    </Card>
+                                </div>
                             </TabsContent>
                             <TabsContent value="menu-management" className="space-y-4 mt-0">
                                 <MenuManagement />
@@ -277,5 +292,3 @@ const AdminDashboard = () => {
 }
 
 export default AdminDashboard;
-
-    

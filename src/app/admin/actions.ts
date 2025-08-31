@@ -497,6 +497,37 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
     revalidatePath('/admin');
 }
 
+export async function getTopSellingMenuItems() {
+    const supabase = createServiceRoleClient();
+    const { data: reservations, error } = await supabase
+        .from('reservations')
+        .select('pre_ordered_items');
+
+    if (error) {
+        console.error("Error fetching reservations for top items chart:", error);
+        return [];
+    }
+
+    const itemCounts: { [key: string]: number } = {};
+
+    reservations.forEach(reservation => {
+        if (Array.isArray(reservation.pre_ordered_items)) {
+            reservation.pre_ordered_items.forEach((item: any) => {
+                if (item && typeof item.name === 'string') {
+                    itemCounts[item.name] = (itemCounts[item.name] || 0) + 1;
+                }
+            });
+        }
+    });
+
+    const sortedItems = Object.entries(itemCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Get top 10 items
+
+    return sortedItems;
+}
+
 
 export async function getMenuItems(): Promise<MenuItem[]> {
     const supabase = createServiceRoleClient();
