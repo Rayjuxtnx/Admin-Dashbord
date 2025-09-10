@@ -1,5 +1,11 @@
-# Firebase Studio
+Admin dashboard
 
-This is a NextJS starter in Firebase Studio.
+Visual insights (charts, graphs, metrics)
 
-To get started, take a look at src/app/page.tsx.
+Data management (users, products, posts, etc.)
+
+Controls and settings (site preferences, user roles, permissions)
+
+Notifications and system updates
+
+Reports and analytics
