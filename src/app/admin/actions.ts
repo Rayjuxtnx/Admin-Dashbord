@@ -443,55 +443,63 @@ export async function getManualConfirmations() {
 export async function updateConfirmationStatus(id: number, status: 'verified' | 'pending' | 'invalid') {
     const supabase = createServiceRoleClient();
     
-    // First, check if we are verifying and if the payment already exists in the main table to prevent duplicates
+    // If verifying, we create a record in the main 'payments' table.
     if (status === 'verified') {
-        const { data: confirmation } = await supabase
+        const { data: confirmation, error: fetchError } = await supabase
             .from('manual_till_payments')
             .select('*')
             .eq('id', id)
             .single();
 
-        if (confirmation) {
-            const { count: existingPaymentCount, error: checkError } = await supabase
+        if (fetchError || !confirmation) {
+            console.error("Could not fetch the manual confirmation record:", fetchError);
+            throw new Error("Could not find the confirmation record to verify.");
+        }
+
+        // Prevent duplicate entries in the payments table
+        const { count: existingPaymentCount } = await supabase
+            .from('payments')
+            .select('*', { count: 'exact', head: true })
+            .eq('mpesa_receipt_number', confirmation.mpesa_code);
+
+        if (existingPaymentCount === 0) {
+            // Determine the correct timestamp. Use user-provided time if valid, otherwise fallback to submission time.
+            const paymentDate = new Date(confirmation.payment_time);
+            const isValidDate = !isNaN(paymentDate.getTime());
+            
+            const finalTimestamp = isValidDate 
+                ? paymentDate.toISOString() 
+                : new Date(confirmation.created_at).toISOString();
+
+            const { error: paymentError } = await supabase
                 .from('payments')
-                .select('*', { count: 'exact', head: true })
-                .eq('mpesa_receipt_number', confirmation.mpesa_code);
+                .insert({
+                    amount: confirmation.amount,
+                    type: 'manual', 
+                    phone_number: confirmation.customer_phone,
+                    raw_payload: confirmation, 
+                    mpesa_receipt_number: confirmation.mpesa_code,
+                    created_at: finalTimestamp,
+                });
 
-            if (checkError) {
-                console.error("Error checking for existing payment:", checkError);
-                throw new Error("Could not verify payment due to a database error.");
+            if (paymentError) {
+                 console.error("Error inserting verified payment into payments table:", paymentError);
+                 throw new Error("Could not save the verified payment to the payments log.");
             }
-
-            if (existingPaymentCount === 0) {
-                 const { error: paymentError } = await supabase
-                    .from('payments')
-                    .insert({
-                        amount: confirmation.amount,
-                        type: 'manual', 
-                        phone_number: confirmation.customer_phone,
-                        raw_payload: confirmation, 
-                        mpesa_receipt_number: confirmation.mpesa_code,
-                        created_at: new Date(confirmation.payment_time).toISOString() || new Date().toISOString(),
-                    });
-                if (paymentError) {
-                     console.error("Error inserting into payments table after verification:", paymentError);
-                     throw new Error("Could not save the verified payment.");
-                }
-            } else {
-                console.warn(`Payment with M-Pesa code ${confirmation.mpesa_code} already exists in the payments table. Skipping insertion.`);
-            }
+        } else {
+            console.warn(`Payment with M-Pesa code ${confirmation.mpesa_code} already exists. Skipping insertion into payments table.`);
         }
     }
 
-    // Now, update the status in the manual_till_payments table
-    const { error } = await supabase
+    // Finally, update the status in the original manual_till_payments table
+    const { error: updateStatusError } = await supabase
         .from('manual_till_payments')
         .update({ status: status })
         .eq('id', id);
 
-    if (error) {
-        console.error("Error updating confirmation status:", error);
-        throw new Error("Could not update confirmation status.");
+    if (updateStatusError) {
+        console.error("Error updating confirmation status:", updateStatusError);
+        throw new Error("Could not update the confirmation status.");
     }
     
     revalidatePath('/admin');
