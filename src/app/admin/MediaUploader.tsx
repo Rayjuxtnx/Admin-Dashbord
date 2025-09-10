@@ -15,9 +15,10 @@ type MediaUploaderProps = {
     onUploadComplete?: (url: string, type: 'image' | 'video', purpose: 'homepage_hero' | 'gallery') => void;
     purpose?: 'homepage_hero' | 'gallery';
     accept?: string;
+    mediaType?: 'image' | 'video' | 'media';
 }
 
-const MediaUploader = ({ onUploadComplete, purpose = 'gallery', accept = "image/*,video/*" }: MediaUploaderProps) => {
+const MediaUploader = ({ onUploadComplete, purpose = 'gallery', accept = "image/*,video/*", mediaType = 'media' }: MediaUploaderProps) => {
     const [preview, setPreview] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [fileType, setFileType] = useState<'image' | 'video' | null>(null);
@@ -83,16 +84,26 @@ const MediaUploader = ({ onUploadComplete, purpose = 'gallery', accept = "image/
             setIsLoading(false);
         }
     };
+    
+    const getDescription = () => {
+        if (purpose === 'homepage_hero') {
+            return "Upload a new hero image or video for the homepage.";
+        }
+        if (mediaType === 'image') {
+            return "Upload images for the public Gallery page.";
+        }
+        if (mediaType === 'video') {
+            return "Upload videos for the public Gallery page.";
+        }
+        return "Upload media for the public gallery."
+    }
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Media Uploader</CardTitle>
                 <CardDescription>
-                    {purpose === 'gallery' 
-                        ? "Upload videos for the public Gallery page." 
-                        : "Upload a new hero image or video for the homepage."
-                    }
+                    {getDescription()}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

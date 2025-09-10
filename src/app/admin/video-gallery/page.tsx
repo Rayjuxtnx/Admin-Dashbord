@@ -60,6 +60,7 @@ export default function VideoGalleryPage() {
             onUploadComplete={fetchVideos}
             purpose="gallery"
             accept="video/*"
+            mediaType="video"
         />
       </div>
 

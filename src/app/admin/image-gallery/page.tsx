@@ -61,6 +61,7 @@ export default function ImageGalleryPage() {
             onUploadComplete={fetchImages}
             purpose="gallery"
             accept="image/*"
+            mediaType="image"
         />
       </div>
 
