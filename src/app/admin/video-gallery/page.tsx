@@ -59,6 +59,7 @@ export default function VideoGalleryPage() {
         <MediaUploader 
             onUploadComplete={fetchVideos}
             purpose="gallery"
+            accept="video/*"
         />
       </div>
 

@@ -14,9 +14,10 @@ import { uploadMedia } from './actions';
 type MediaUploaderProps = {
     onUploadComplete?: (url: string, type: 'image' | 'video', purpose: 'homepage_hero' | 'gallery') => void;
     purpose?: 'homepage_hero' | 'gallery';
+    accept?: string;
 }
 
-const MediaUploader = ({ onUploadComplete, purpose = 'gallery' }: MediaUploaderProps) => {
+const MediaUploader = ({ onUploadComplete, purpose = 'gallery', accept = "image/*,video/*" }: MediaUploaderProps) => {
     const [preview, setPreview] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [fileType, setFileType] = useState<'image' | 'video' | null>(null);
@@ -89,7 +90,7 @@ const MediaUploader = ({ onUploadComplete, purpose = 'gallery' }: MediaUploaderP
                 <CardTitle>Media Uploader</CardTitle>
                 <CardDescription>
                     {purpose === 'gallery' 
-                        ? "Upload images or videos for the public Gallery page." 
+                        ? "Upload videos for the public Gallery page." 
                         : "Upload a new hero image or video for the homepage."
                     }
                 </CardDescription>
@@ -97,7 +98,7 @@ const MediaUploader = ({ onUploadComplete, purpose = 'gallery' }: MediaUploaderP
             <CardContent className="space-y-4">
                  <div className="space-y-2">
                     <Label htmlFor="media-upload">Select File</Label>
-                    <Input id="media-upload" type="file" accept="image/*,video/*" onChange={handleFileChange} disabled={isLoading}/>
+                    <Input id="media-upload" type="file" accept={accept} onChange={handleFileChange} disabled={isLoading}/>
                  </div>
                 {preview && fileType === 'image' && (
                     <div className="mt-4">
@@ -130,5 +131,3 @@ const MediaUploader = ({ onUploadComplete, purpose = 'gallery' }: MediaUploaderP
 }
 
 export default MediaUploader;
-
-    
