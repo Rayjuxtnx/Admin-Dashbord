@@ -474,12 +474,12 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
             .eq('mpesa_receipt_number', confirmation.mpesa_code);
 
         if (existingPaymentCount === 0) {
-            const paymentDate = new Date(confirmation.payment_time);
-            const isValidDate = !isNaN(paymentDate.getTime());
+             const paymentDate = new Date(confirmation.payment_time);
+             const isValidDate = !isNaN(paymentDate.getTime());
             
-            const finalTimestamp = isValidDate 
-                ? paymentDate.toISOString() 
-                : new Date(confirmation.created_at).toISOString();
+             const finalTimestamp = isValidDate 
+                 ? paymentDate.toISOString() 
+                 : new Date(confirmation.created_at).toISOString();
 
             const { error: paymentError } = await supabase
                 .from('payments')
