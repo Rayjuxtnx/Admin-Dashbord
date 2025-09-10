@@ -471,7 +471,7 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
                         phone_number: confirmation.customer_phone,
                         raw_payload: confirmation, 
                         mpesa_receipt_number: confirmation.mpesa_code,
-                        created_at: new Date().toISOString(),
+                        created_at: confirmation.created_at || new Date().toISOString(),
                     });
                 if (paymentError) {
                      console.error("Error inserting into payments table after verification:", paymentError);
@@ -554,8 +554,8 @@ export async function upsertMenuItem(item: Partial<MenuItem>): Promise<MenuItem>
   };
   
   // If the item has an ID, it's an update. If not, it's an insert.
-  const query = item.id 
-    ? supabase.from('menu_items').update(itemToUpsert).eq('id', item.id)
+  const query = id 
+    ? supabase.from('menu_items').update(itemToUpsert).eq('id', id)
     : supabase.from('menu_items').insert({ ...itemToUpsert });
   
   const { data, error } = await query
