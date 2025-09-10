@@ -464,12 +464,13 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
 
         if (existingPaymentCount === 0) {
             // Determine the correct timestamp. Use user-provided time if valid, otherwise fallback to submission time.
-            const paymentDate = new Date(confirmation.payment_time);
+             const paymentDate = new Date(confirmation.payment_time);
             const isValidDate = !isNaN(paymentDate.getTime());
             
             const finalTimestamp = isValidDate 
                 ? paymentDate.toISOString() 
                 : new Date(confirmation.created_at).toISOString();
+
 
             const { error: paymentError } = await supabase
                 .from('payments')
@@ -657,3 +658,5 @@ export async function deletePost(postId: number): Promise<void> {
   revalidatePath('/admin');
   return;
 }
+
+    

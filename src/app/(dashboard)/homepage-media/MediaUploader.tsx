@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from 'react';
@@ -130,3 +131,5 @@ const MediaUploader = ({ onUploadComplete, purpose = 'gallery' }: MediaUploaderP
 }
 
 export default MediaUploader;
+
+    

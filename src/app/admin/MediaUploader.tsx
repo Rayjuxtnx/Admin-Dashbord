@@ -130,3 +130,5 @@ const MediaUploader = ({ onUploadComplete, purpose = 'gallery' }: MediaUploaderP
 }
 
 export default MediaUploader;
+
+    
