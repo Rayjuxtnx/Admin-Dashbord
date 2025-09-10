@@ -44,7 +44,7 @@ export default function TopSellingChart({ data, isLoading }: TopSellingChartProp
             layout="vertical"
             margin={{
                 right: 16,
-                left: 10,
+                left: 20,
             }}
         >
             <CartesianGrid horizontal={false} />
@@ -56,8 +56,8 @@ export default function TopSellingChart({ data, isLoading }: TopSellingChartProp
                 tickMargin={10}
                 minTickGap={1}
                 stroke="#888888"
-                fontSize={12}
-                className="truncate"
+                fontSize={11}
+                width={150} 
             />
             <XAxis
                 type="number"
@@ -66,6 +66,7 @@ export default function TopSellingChart({ data, isLoading }: TopSellingChartProp
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `${value}`}
+                allowDecimals={false}
             />
             <ChartTooltip
                 cursor={{ fill: 'hsl(var(--muted))' }}
@@ -84,3 +85,4 @@ export default function TopSellingChart({ data, isLoading }: TopSellingChartProp
     </ChartContainer>
   )
 }
+
