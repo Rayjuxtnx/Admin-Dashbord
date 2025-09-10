@@ -147,6 +147,8 @@ export async function deleteGalleryMedia(id: number, path: string) {
         
     if (storageError) {
         console.error("Error deleting media from storage:", storageError);
+        // Even if storage deletion fails, the DB record is gone, so we throw to inform the user.
+        throw new Error("Failed to delete media from storage. The database record was removed, but the file may still exist.");
     }
 
     revalidatePath('/gallery');
@@ -464,7 +466,7 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
 
         if (existingPaymentCount === 0) {
             // Determine the correct timestamp. Use user-provided time if valid, otherwise fallback to submission time.
-             const paymentDate = new Date(confirmation.payment_time);
+            const paymentDate = new Date(confirmation.payment_time);
             const isValidDate = !isNaN(paymentDate.getTime());
             
             const finalTimestamp = isValidDate 
@@ -658,5 +660,3 @@ export async function deletePost(postId: number): Promise<void> {
   revalidatePath('/admin');
   return;
 }
-
-    
