@@ -50,7 +50,7 @@ async function ensureBucketExists(bucketName: string) {
 
 export async function uploadMedia(formData: FormData) {
   const file = formData.get('file') as File;
-  const bucket = 'media';
+  const bucket = 'gallery';
   const purpose = formData.get('purpose') as 'homepage_hero' | 'gallery';
   const supabase = createServiceRoleClient();
 
@@ -143,7 +143,7 @@ export async function deleteGalleryMedia(id: number, path: string) {
     }
     
     const { error: storageError } = await supabase.storage
-        .from('media')
+        .from('gallery')
         .remove([path]);
         
     if (storageError) {
