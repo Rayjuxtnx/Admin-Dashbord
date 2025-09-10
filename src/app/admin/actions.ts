@@ -107,6 +107,7 @@ export async function uploadMedia(formData: FormData) {
   revalidatePath('/');
   revalidatePath('/admin');
   revalidatePath('/gallery');
+  revalidatePath('/image-gallery');
   revalidatePath('/video-gallery');
   revalidatePath('/homepage-media');
 
@@ -152,6 +153,7 @@ export async function deleteGalleryMedia(id: number, path: string) {
     }
 
     revalidatePath('/gallery');
+    revalidatePath('/image-gallery');
     revalidatePath('/video-gallery');
     revalidatePath('/homepage-media');
     revalidatePath('/admin');
@@ -344,6 +346,14 @@ export async function getDashboardCounts() {
         
     if (videosError) console.error('Error fetching videos count:', videosError);
 
+    const { count: imagesCount, error: imagesError } = await supabase
+        .from('gallery')
+        .select('id', { count: 'exact', head: true })
+        .eq('type', 'image')
+        .eq('purpose', 'gallery');
+
+    if (imagesError) console.error('Error fetching images count:', imagesError);
+
     const { count: pendingManualPayments, error: pendingError } = await supabase
         .from('manual_till_payments')
         .select('*', { count: 'exact', head: true })
@@ -356,6 +366,7 @@ export async function getDashboardCounts() {
         totalRevenue,
         publishedPostsCount: publishedPostsCount ?? 0,
         videosCount: videosCount ?? 0,
+        imagesCount: imagesCount ?? 0,
         pendingManualPayments: pendingManualPayments ?? 0,
     };
 }
@@ -445,7 +456,6 @@ export async function getManualConfirmations() {
 export async function updateConfirmationStatus(id: number, status: 'verified' | 'pending' | 'invalid') {
     const supabase = createServiceRoleClient();
     
-    // If verifying, we create a record in the main 'payments' table.
     if (status === 'verified') {
         const { data: confirmation, error: fetchError } = await supabase
             .from('manual_till_payments')
@@ -458,21 +468,18 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
             throw new Error("Could not find the confirmation record to verify.");
         }
 
-        // Prevent duplicate entries in the payments table
         const { count: existingPaymentCount } = await supabase
             .from('payments')
             .select('*', { count: 'exact', head: true })
             .eq('mpesa_receipt_number', confirmation.mpesa_code);
 
         if (existingPaymentCount === 0) {
-            // Determine the correct timestamp. Use user-provided time if valid, otherwise fallback to submission time.
             const paymentDate = new Date(confirmation.payment_time);
             const isValidDate = !isNaN(paymentDate.getTime());
             
             const finalTimestamp = isValidDate 
                 ? paymentDate.toISOString() 
                 : new Date(confirmation.created_at).toISOString();
-
 
             const { error: paymentError } = await supabase
                 .from('payments')
@@ -494,7 +501,6 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
         }
     }
 
-    // Finally, update the status in the original manual_till_payments table
     const { error: updateStatusError } = await supabase
         .from('manual_till_payments')
         .update({ status: status })

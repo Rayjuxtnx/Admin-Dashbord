@@ -14,6 +14,7 @@ import {
   Settings,
   Newspaper,
   SendToBack,
+  Image as ImageIconLucide,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,6 +35,7 @@ const links = [
   { href: "/admin?tab=posts", label: "Posts", icon: Newspaper, tab: "posts" },
   { href: "/admin?tab=menu-management", label: "Menu Management", icon: Utensils, tab: "menu-management" },
   { href: "/admin?tab=homepage-media", label: "Homepage Media", icon: ImageIcon, tab: "homepage-media" },
+  { href: "/admin?tab=image-gallery", label: "Image Gallery", icon: ImageIconLucide, tab: "image-gallery" },
   { href: "/admin?tab=video-gallery", label: "Video Gallery", icon: Video, tab: "video-gallery" },
 ];
 

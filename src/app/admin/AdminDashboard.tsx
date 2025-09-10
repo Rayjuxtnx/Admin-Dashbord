@@ -4,7 +4,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
-import { Utensils, CalendarCheck, Newspaper, Video, Landmark, ChevronsUpDown } from "lucide-react";
+import { Utensils, CalendarCheck, Newspaper, Video, Landmark, ChevronsUpDown, ImageIcon } from "lucide-react";
 import AdminChart, { ProcessedSalesData } from "./AdminChart";
 import SalesByHourChart, { ProcessedSalesByHourData } from "./SalesByHourChart";
 import TopSellingChart, { TopSellingItemData } from "./TopSellingChart";
@@ -21,6 +21,7 @@ import ManualConfirmationsList from "./ManualConfirmationsList";
 import PostManagementPage from "./posts/page";
 import HomepageMediaPage from "./homepage-media/page";
 import VideoGalleryPage from "./video-gallery/page";
+import ImageGalleryPage from "./image-gallery/page";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -43,6 +44,7 @@ const AdminDashboard = () => {
       totalRevenue: 'Ksh 0',
       publishedPostsCount: 0,
       videosCount: 0,
+      imagesCount: 0,
       pendingManualPayments: 0,
     });
     const [monthlyChartData, setMonthlyChartData] = useState<ProcessedSalesData[]>([]);
@@ -58,6 +60,7 @@ const AdminDashboard = () => {
         { value: 'manual-payments', label: 'Manual Payments', count: counts.pendingManualPayments, isLoading: isLoading },
         { value: 'posts', label: 'Posts', count: counts.publishedPostsCount, isLoading: isLoading },
         { value: 'homepage-media', label: 'Homepage Media' },
+        { value: 'image-gallery', label: 'Image Gallery', count: counts.imagesCount, isLoading: isLoading },
         { value: 'video-gallery', label: 'Video Gallery', count: counts.videosCount, isLoading: isLoading }
     ];
 
@@ -279,6 +282,9 @@ const AdminDashboard = () => {
                             </TabsContent>
                             <TabsContent value="homepage-media" className="space-y-4 mt-0">
                                 <HomepageMediaPage />
+                            </TabsContent>
+                             <TabsContent value="image-gallery" className="space-y-4 mt-0">
+                                <ImageGalleryPage />
                             </TabsContent>
                             <TabsContent value="video-gallery" className="space-y-4 mt-0">
                                 <VideoGalleryPage />
