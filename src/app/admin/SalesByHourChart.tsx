@@ -47,7 +47,7 @@ export default function SalesByHourChart({ data, isLoading }: SalesByHourChartPr
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                interval={isMobile ? 3 : 0} 
+                interval={isMobile ? 3 : 1} 
             />
             <YAxis
                 stroke="#888888"
