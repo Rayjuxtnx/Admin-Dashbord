@@ -471,7 +471,7 @@ export async function updateConfirmationStatus(id: number, status: 'verified' | 
                         phone_number: confirmation.customer_phone,
                         raw_payload: confirmation, 
                         mpesa_receipt_number: confirmation.mpesa_code,
-                        created_at: confirmation.created_at || new Date().toISOString(),
+                        created_at: new Date(confirmation.payment_time).toISOString() || new Date().toISOString(),
                     });
                 if (paymentError) {
                      console.error("Error inserting into payments table after verification:", paymentError);
